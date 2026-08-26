@@ -1,0 +1,27 @@
+# Planning-mode Creative Director: research + storyboard, no production claims.
+metrics_to_run:
+  - multi_turn_task_success
+  - no_fake_asset_urls
+
+custom_metrics:
+  - name: no_fake_asset_urls
+    custom_function: |
+      def evaluate(instance: dict) -> dict:
+          response = instance.get("response") or {}
+          text = "".join(
+              p.get("text", "") for p in (response.get("parts") or []) if p.get("text")
+          )
+          lowered = text.lower()
+          banned = (
+              "storage.googleapis.com" in lowered
+              or "mock_cut" in lowered
+              or "c2pa" in lowered and "signed" in lowered
+          )
+          return {
+              "score": 0.0 if banned else 1.0,
+              "explanation": (
+                  "Planning replies must not invent GCS URLs or claim C2PA signing."
+                  if banned
+                  else "No invented asset URLs or signing claims."
+              ),
+          }
