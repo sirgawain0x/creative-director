@@ -1,0 +1,26 @@
+{
+  "name": "creative-director-ai",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Autonomous AI Music Video Director built on Google ADK TypeScript",
+  "main": "agent.ts",
+  "engines": {
+    "node": ">=24.13.0",
+    "npm": ">=11.8.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "adk:run": "adk run agent.ts",
+    "adk:web": "adk web agent.ts",
+    "adk:deploy": "adk deploy agent_engine agent.ts --display_name \"Creative Director AI\" --description \"Autonomous music video director for Creative Pixels\""
+  },
+  "dependencies": {
+    "@google/adk": "^2.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@google/adk-devtools": "^2.0.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.0"
+  }
+}

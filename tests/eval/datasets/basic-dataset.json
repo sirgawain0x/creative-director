@@ -1,0 +1,26 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "storyboard_120bpm",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Storyboard a beat-synced music video at 120 BPM for a 30-second dark synthwave intro. Include scene count, timecodes, camera, and lighting. Do not render or invent download URLs."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "research_visual_refs",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Research visual references for a dark synthwave mood (neon, wet streets, analog grain) and propose 4 storyboard beats at 100 BPM. Cite sources if you look anything up."
+          }
+        ]
+      }
+    }
+  ]
+}
