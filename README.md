@@ -70,6 +70,23 @@ Mock production pipeline:
 CREATIVE_DIRECTOR_MODE=production npm run adk:run
 ```
 
+## Evaluation
+
+`agents-cli eval run` does **not** load TypeScript agents in-process. Point it at a local ADK API server, and use the camelCase proxy (agents-cli sends snake_case; TS ADK expects camelCase):
+
+```bash
+# terminal 1
+npm run adk:api
+
+# terminal 2
+npm run adk:proxy
+
+# terminal 3
+npm run eval
+```
+
+Metrics live in [`tests/eval/eval_config.yaml`](tests/eval/eval_config.yaml). Results land under `artifacts/`.
+
 ## Deploy to Agent Runtime (Agent Engine)
 
 TypeScript ADK deploys with the CLI (equivalent to the Python `AdkApp` + `client.agent_engines.create` flow):

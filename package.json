@@ -12,7 +12,10 @@
     "typecheck": "tsc --noEmit",
     "adk:run": "adk run agent.ts",
     "adk:web": "adk web agent.ts",
-    "adk:deploy": "adk deploy agent_engine agent.ts --display_name \"Creative Director AI\" --description \"Autonomous music video director for Creative Pixels\""
+    "adk:api": "adk api_server agent.ts --port 8765 --host 127.0.0.1",
+    "adk:proxy": "node scripts/adk-camel-proxy.mjs",
+    "adk:deploy": "adk deploy agent_engine agent.ts --display_name \"Creative Director AI\" --description \"Autonomous music video director for Creative Pixels\"",
+    "eval": "agents-cli eval run --dataset tests/eval/datasets/basic-dataset.json --config tests/eval/eval_config.yaml --url http://127.0.0.1:8766 --app-name agent --concurrency 1"
   },
   "dependencies": {
     "@google/adk": "^2.0.0",
