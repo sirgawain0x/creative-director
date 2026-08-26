@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # agents-cli eval traces / grade results
 artifacts/
+
+# Local IDE / accidental CLI artifacts
+.cursor/
