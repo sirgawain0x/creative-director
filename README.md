@@ -81,22 +81,60 @@ Mock production pipeline:
 CREATIVE_DIRECTOR_MODE=production npm run adk:run
 ```
 
-## Evaluation
+## Reproducible Testing
 
-`agents-cli eval run` does **not** load TypeScript agents in-process. Point it at a local ADK API server, and use the camelCase proxy (agents-cli sends snake_case; TS ADK expects camelCase):
+Anyone with GCP ADC and this repo can reproduce the same checks below.
+
+### Prerequisites (one-time)
+
+1. Complete [Setup](#setup) (deps, `.env`, `gcloud auth application-default login`).
+2. Install the Agents CLI:
 
 ```bash
-# terminal 1
+uv tool install google-agents-cli
+```
+
+3. Leave `CREATIVE_DIRECTOR_MODE` unset (or `planning`) so evals exercise research/storyboard behavior, not the mock production tools.
+
+### Static check
+
+```bash
+npm run typecheck
+```
+
+### Agent evaluation
+
+`agents-cli eval run` does **not** load TypeScript agents in-process. Point it at a local ADK API server, and use the camelCase proxy (agents-cli sends snake_case; TS ADK expects camelCase).
+
+Run these in three terminals from the repo root:
+
+```bash
+# terminal 1 — ADK API on :8765
 npm run adk:api
 
-# terminal 2
+# terminal 2 — snake_case → camelCase proxy on :8766
 npm run adk:proxy
 
-# terminal 3
+# terminal 3 — grade against the basic dataset
 npm run eval
 ```
 
-Metrics live in [`tests/eval/eval_config.yaml`](tests/eval/eval_config.yaml). Results land under `artifacts/`.
+| Piece | Path / port |
+|-------|-------------|
+| Dataset | [`tests/eval/datasets/basic-dataset.json`](tests/eval/datasets/basic-dataset.json) (2 planning cases) |
+| Metrics | [`tests/eval/eval_config.yaml`](tests/eval/eval_config.yaml) (`multi_turn_task_success`, `no_fake_asset_urls`) |
+| API | `http://127.0.0.1:8765` |
+| Eval URL | `http://127.0.0.1:8766` (via proxy) |
+| Results | `artifacts/grade_results/results_<timestamp>.{json,html}` |
+
+Expected: both cases pass; planning replies must not invent GCS/`mock_cut` download URLs or claim C2PA signing.
+
+Optional follow-ups after a baseline:
+
+```bash
+agents-cli eval compare artifacts/grade_results/results_OLD.json artifacts/grade_results/results_NEW.json
+agents-cli eval analyze --results artifacts/grade_results/results_<timestamp>.json
+```
 
 ## Deploy to Agent Runtime
 
