@@ -2,6 +2,12 @@
 
 Autonomous AI Music Video Director built with the **Agent Development Kit (ADK)** on TypeScript, using `gemini-3.5-flash` via Agent Platform / Vertex AI.
 
+<img width="1706" height="391" alt="Screenshot 2026-08-31 at 8 43 47 PM" src="https://github.com/user-attachments/assets/8c6f4f6f-8734-4857-8031-3e1a5c2940ae" />
+
+<img width="1444" height="788" alt="Screenshot 2026-08-31 at 8 44 14 PM" src="https://github.com/user-attachments/assets/de51e304-fb80-46da-95c1-b23a95ddc672" />
+
+
+
 ## Prerequisites
 
 - Node.js `>= 24.13.0`
