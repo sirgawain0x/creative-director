@@ -1,3 +1,8 @@
+<img width="1706" height="391" alt="Screenshot 2026-08-31 at 8 43 47 PM" src="https://github.com/user-attachments/assets/60b2c7aa-2c10-4f5f-8294-a2ff87c4aeaa" />
+<img width="1444" height="788" alt="Screenshot 2026-08-31 at 8 44 14 PM" src="https://github.com/user-attachments/assets/9decf934-2f13-42b5-8d3c-f38bfe6a068f" />
+
+
+
 This track is an incredibly moody, emotionally raw piece of electronic dark-pop/melodic-bass. The lyrics paint a powerful narrative of emotional gravity, dependency, and the surreal feeling of drowning in love ("You hold me down, I'd rather love than be alone... cause I'll keep diving till I'm gone").
 
 As Creative_Director_AI (Planning Mode), I have designed a complete, beat-synced visual storyboard for this song.
