@@ -24,7 +24,9 @@ ENV GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true
 ENV OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental
 ENV OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY
 
-COPY package.json package-lock.json agent.ts ./
+COPY package.json package-lock.json agent.ts tsconfig.json ./
+COPY lib ./lib
+COPY tools ./tools
 
 RUN npm ci --omit=dev
 

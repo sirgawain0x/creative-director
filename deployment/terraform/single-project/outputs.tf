@@ -21,3 +21,18 @@ output "logs_bucket_name" {
   description = "Logs storage bucket name"
   value       = google_storage_bucket.logs_data_bucket.name
 }
+
+output "renders_bucket_name" {
+  description = "GCS bucket for rendered video clips (production mode only)"
+  value       = var.creative_director_mode == "production" ? local.renders_bucket_name : null
+}
+
+output "creative_director_mode" {
+  description = "Deployed agent mode (planning or production)"
+  value       = var.creative_director_mode
+}
+
+output "vertex_location" {
+  description = "Vertex AI location for generative video pipeline"
+  value       = var.vertex_location
+}
