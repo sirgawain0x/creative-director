@@ -7,6 +7,10 @@ import {
   URL_CONTEXT,
 } from '@google/adk';
 import {z} from 'zod';
+import {isC2paEmbedConfigured, isHeadlessAssemblyConfigured, isProductionRenderConfigured, isProvenanceConfigured} from './lib/render-config.js';
+import {assembleAndSyncTimeline} from './tools/assemble-timeline.js';
+import {generateVideoCut} from './tools/generate-video-cut.js';
+import {signC2paManifest} from './tools/sign-c2pa-manifest.js';
 
 /**
  * Agent Platform / Vertex (Enterprise) auth.
@@ -56,6 +60,14 @@ const agentMode =
 const MOCK_NOTICE =
   'MOCK ONLY — no real video, GCS object, or C2PA signature was created. Do not present this URL as a downloadable asset.';
 
+const productionRenderEnabled = isProductionRenderConfigured();
+const headlessAssemblyEnabled =
+  productionRenderEnabled && isHeadlessAssemblyConfigured();
+const provenanceEnabled =
+  productionRenderEnabled && isProvenanceConfigured();
+const c2paEmbedEnabled =
+  productionRenderEnabled && isC2paEmbedConfigured();
+
 // ----------------------------------------------------------------------
 // 1. Specialist Sub-Agents (Search & URL Grounding)
 // ----------------------------------------------------------------------
@@ -87,8 +99,9 @@ const researchTools = [
 // ----------------------------------------------------------------------
 const generateVideoCutTool = new FunctionTool({
   name: 'generate_video_cut',
-  description:
-    'MOCK STUB: Simulates rendering a cinematic video cut. Returns fake URLs only — does not call Veo/Imagen or write to GCS.',
+  description: productionRenderEnabled
+    ? 'Renders a cinematic video cut via Gemini (start frame) + Veo 3.1 i2v, uploads MP4 to GCS, and returns the clip URL.'
+    : 'MOCK STUB: Simulates rendering a cinematic video cut. Returns fake URLs only — does not call Veo/Imagen or write to GCS.',
   parameters: z.object({
     scene_index: z.number().describe('The sequence number of the scene (1, 2, 3...)'),
     timestamp_start: z.string().describe('Start timestamp (e.g. 00:00)'),
@@ -103,12 +116,12 @@ const generateVideoCutTool = new FunctionTool({
       .string()
       .describe('e.g. slow drone aerial, dolly tracking in, handheld orbit'),
   }),
-  execute: async ({
-    scene_index,
-    timestamp_start,
-    timestamp_end,
-    visual_prompt,
-  }) => {
+  execute: async (params) => {
+    if (productionRenderEnabled) {
+      return generateVideoCut(params);
+    }
+
+    const {scene_index, timestamp_start, timestamp_end, visual_prompt} = params;
     return {
       mock: true,
       status: 'mock_rendered',
@@ -123,8 +136,9 @@ const generateVideoCutTool = new FunctionTool({
 
 const assembleTimelineTool = new FunctionTool({
   name: 'assemble_and_sync_timeline',
-  description:
-    'MOCK STUB: Simulates stitching cuts to a master timeline. Returns a fake master URL — does not assemble real video.',
+  description: headlessAssemblyEnabled
+    ? 'Stitches rendered clip URLs and master audio on Pixels headless, renders an MP4 master, and uploads to GCS.'
+    : 'MOCK STUB: Simulates stitching cuts to a master timeline. Returns a fake master URL — does not assemble real video.',
   parameters: z.object({
     project_title: z.string().describe('The title of the video project'),
     clip_urls: z
@@ -133,7 +147,12 @@ const assembleTimelineTool = new FunctionTool({
     audio_uri: z.string().describe('URI of the master audio file'),
     target_bpm: z.number().optional().describe('Detected BPM for transition cuts'),
   }),
-  execute: async ({project_title, clip_urls}) => {
+  execute: async (params) => {
+    if (headlessAssemblyEnabled) {
+      return assembleAndSyncTimeline(params);
+    }
+
+    const {project_title, clip_urls} = params;
     const slug = project_title.toLowerCase().replace(/\s+/g, '_');
     return {
       mock: true,
@@ -148,8 +167,11 @@ const assembleTimelineTool = new FunctionTool({
 
 const signC2paTool = new FunctionTool({
   name: 'sign_c2pa_manifest',
-  description:
-    'MOCK STUB: Simulates C2PA provenance signing. Returns fake metadata — does not sign a real file.',
+  description: provenanceEnabled
+    ? c2paEmbedEnabled
+      ? 'Records C2PA provenance in GCS and cryptographically signs the master via Pixels headless (C2PA_HEADLESS_EMBED).'
+      : 'Records C2PA provenance metadata in GCS (unsigned). Does not cryptographically sign — use Creative Pixels to complete signing.'
+    : 'MOCK STUB: Simulates C2PA provenance signing. Returns fake metadata — does not sign a real file.',
   parameters: z.object({
     master_video_url: z.string().describe('URL of the compiled master video file'),
     creator_did: z.string().describe('Creator DID or wallet address for attribution'),
@@ -158,8 +180,21 @@ const signC2paTool = new FunctionTool({
       .describe(
         'List of generative AI models used (e.g. Gemini 3.5 Flash, Google Veo)',
       ),
+    clip_urls: z
+      .array(z.string())
+      .optional()
+      .describe('Source clip URLs used in the master (for C2PA ingredients)'),
+    project_title: z
+      .string()
+      .optional()
+      .describe('Project title for provenance metadata'),
   }),
-  execute: async ({master_video_url, creator_did, ai_models_used}) => {
+  execute: async (params) => {
+    if (provenanceEnabled) {
+      return signC2paManifest(params);
+    }
+
+    const {master_video_url, creator_did, ai_models_used} = params;
     return {
       mock: true,
       c2pa_status: 'mock_signed',
@@ -205,12 +240,99 @@ STRICT RULES:
   tools: researchTools,
 });
 
+const PROVENANCE_RULES = c2paEmbedEnabled
+  ? `- 'sign_c2pa_manifest' writes provenance sidecars and returns cryptographically_signed: true with signed_master_url when C2PA_HEADLESS_EMBED is enabled.
+- Share signed_master_url, provenance_manifest_url, and ingredients_url when sign_c2pa_manifest returns mock: false.
+- Pass clip_urls from generate_video_cut results into sign_c2pa_manifest for ingredient metadata.`
+  : `- 'sign_c2pa_manifest' writes provenance sidecars to GCS but does NOT cryptographically sign (cryptographically_signed: false).
+- Say explicitly the master is UNSIGNED until the user completes C2PA in Creative Pixels.
+- Share provenance_manifest_url and unsigned_master_url when sign_c2pa_manifest returns mock: false.
+- Pass clip_urls from generate_video_cut results into sign_c2pa_manifest for ingredient metadata.`;
+
 const productionAgent = new LlmAgent({
   name: 'Creative_Director_AI',
-  description:
-    'Production-mode Creative Director: storyboard plus MOCK render/assemble/C2PA pipeline stubs.',
+  description: productionRenderEnabled
+    ? headlessAssemblyEnabled
+      ? provenanceEnabled
+        ? c2paEmbedEnabled
+          ? 'Production-mode Creative Director: real Veo cuts, headless assembly, GCS provenance, and headless C2PA embed.'
+          : 'Production-mode Creative Director: real Veo cuts, headless assembly, and GCS provenance (C2PA signing in Pixels UI).'
+        : 'Production-mode Creative Director: real Veo cuts + headless timeline assembly; C2PA remains mocked.'
+      : provenanceEnabled
+        ? 'Production-mode Creative Director: real Veo cuts and GCS provenance metadata; assembly mocked.'
+        : 'Production-mode Creative Director: real Veo cuts to GCS; assembly and C2PA remain mocked.'
+    : 'Production-mode Creative Director: storyboard plus MOCK render/assemble/C2PA pipeline stubs.',
   model: creativeDirectorModel,
-  instruction: `You are Creative Director AI in PRODUCTION MODE (MOCK PIPELINE).
+  instruction: productionRenderEnabled
+    ? headlessAssemblyEnabled
+      ? provenanceEnabled
+        ? c2paEmbedEnabled
+          ? `You are Creative Director AI in PRODUCTION MODE (LIVE CUTS + ASSEMBLY + PROVENANCE + C2PA EMBED).
+'generate_video_cut' renders real MP4 clips (Gemini still + Veo 3.1) and uploads them to GCS.
+'assemble_and_sync_timeline' stitches clips with master audio via Pixels headless and uploads a real master MP4.
+'sign_c2pa_manifest' writes provenance sidecars and cryptographically signs the master via Pixels headless (cryptographically_signed: true, signed_master_url).
+
+Workflow:
+1. Ingest audio context; delegate research when needed.
+2. Formulate a beat-synced storyboard.
+3. Call 'generate_video_cut' per scene, then 'assemble_and_sync_timeline', then 'sign_c2pa_manifest' (include clip_urls).
+
+STRICT RULES:
+- Treat generate_video_cut, assemble_and_sync_timeline, and sign_c2pa_manifest results with mock: false as real.
+${PROVENANCE_RULES}`
+          : `You are Creative Director AI in PRODUCTION MODE (LIVE CUTS + ASSEMBLY + PROVENANCE).
+'generate_video_cut' renders real MP4 clips (Gemini still + Veo 3.1) and uploads them to GCS.
+'assemble_and_sync_timeline' stitches clips with master audio via Pixels headless and uploads a real master MP4.
+'sign_c2pa_manifest' records C2PA provenance metadata in GCS (unsigned / pending_user_sign).
+
+Workflow:
+1. Ingest audio context; delegate research when needed.
+2. Formulate a beat-synced storyboard.
+3. Call 'generate_video_cut' per scene, then 'assemble_and_sync_timeline', then 'sign_c2pa_manifest' (include clip_urls).
+
+STRICT RULES:
+- Treat generate_video_cut, assemble_and_sync_timeline, and sign_c2pa_manifest results with mock: false as real.
+${PROVENANCE_RULES}`
+        : `You are Creative Director AI in PRODUCTION MODE (LIVE CUTS + ASSEMBLY).
+'generate_video_cut' renders real MP4 clips (Gemini still + Veo 3.1) and uploads them to GCS.
+'assemble_and_sync_timeline' stitches those clips with master audio via Pixels headless and uploads a real master MP4.
+'sign_c2pa_manifest' is still a MOCK stub (mock: true).
+
+Workflow:
+1. Ingest audio context; delegate research to 'search_specialist' / 'url_specialist' when needed.
+2. Formulate a beat-synced storyboard.
+3. Call 'generate_video_cut' for each scene, then 'assemble_and_sync_timeline', then 'sign_c2pa_manifest'.
+
+STRICT RULES:
+- Treat generate_video_cut and assemble_and_sync_timeline results with mock: false as real downloadable assets.
+- Results from sign_c2pa_manifest with mock: true are SIMULATIONS — say so explicitly.`
+      : provenanceEnabled
+        ? `You are Creative Director AI in PRODUCTION MODE (LIVE CUTS + PROVENANCE).
+'generate_video_cut' renders real MP4 clips to GCS.
+'assemble_and_sync_timeline' is still a MOCK stub.
+'sign_c2pa_manifest' records provenance metadata in GCS (unsigned).
+
+Workflow:
+1. Storyboard → generate_video_cut per scene → sign_c2pa_manifest with clip_urls (master may be mock).
+
+STRICT RULES:
+- generate_video_cut with mock: false are real clips.
+${PROVENANCE_RULES}`
+        : `You are Creative Director AI in PRODUCTION MODE (PARTIAL LIVE PIPELINE).
+'generate_video_cut' renders real MP4 clips (Gemini still + Veo 3.1) and uploads them to GCS.
+'assemble_and_sync_timeline' and 'sign_c2pa_manifest' are still MOCK stubs (mock: true).
+
+Workflow:
+1. Ingest audio context; delegate research to 'search_specialist' / 'url_specialist' when needed.
+2. Formulate a beat-synced storyboard.
+3. Call 'generate_video_cut' for each scene (real renders), then 'assemble_and_sync_timeline', then 'sign_c2pa_manifest'.
+
+STRICT RULES:
+- Treat generate_video_cut results with mock: false as real downloadable clips; share clip_url as the asset link.
+- Results from assemble_and_sync_timeline and sign_c2pa_manifest with mock: true are SIMULATIONS — say so explicitly.
+- Prefix mock assembly/C2PA URLs with "MOCK (not downloadable):".
+- Do not claim C2PA was cryptographically signed.`
+    : `You are Creative Director AI in PRODUCTION MODE (MOCK PIPELINE).
 Video tools are stubs — they return fake URLs labeled mock: true.
 
 Workflow:

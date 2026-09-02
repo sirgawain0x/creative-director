@@ -14,6 +14,31 @@
 
 locals {
   dummy_source_b64 = trimspace(file("${path.module}/../shared/dummy_source.b64"))
+
+  renders_bucket_name = coalesce(
+    var.renders_gcs_bucket_name,
+    "${var.project_id}-creative-pixels-renders",
+  )
+
+  production_render_env = var.creative_director_mode == "production" ? {
+    CREATIVE_DIRECTOR_MODE = "production"
+    RENDERS_GCS_BUCKET     = local.renders_bucket_name
+    VERTEX_LOCATION        = var.vertex_location
+  } : {
+    CREATIVE_DIRECTOR_MODE = "planning"
+  }
+
+  optional_veo_env = merge(
+    var.veo_tier != "" ? { VEO_TIER = var.veo_tier } : {},
+    var.veo_quality != "" ? { VEO_QUALITY = var.veo_quality } : {},
+  )
+
+  optional_headless_env = merge(
+    var.pixels_headless_url != "" ? { PIXELS_HEADLESS_URL = var.pixels_headless_url } : {},
+    var.pixels_headless_api_key != "" ? { PIXELS_HEADLESS_API_KEY = var.pixels_headless_api_key } : {},
+  )
+
+  agent_env = merge(local.production_render_env, local.optional_veo_env, local.optional_headless_env)
 }
 
 resource "google_vertex_ai_reasoning_engine" "app" {
@@ -91,6 +116,17 @@ resource "google_vertex_ai_reasoning_engine" "app" {
       env {
         name  = "GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY"
         value = "true"
+      }
+
+      # Production render pipeline (Phase 1). Redeploy via agents-cli after
+      # changing creative_director_mode / vertex_location / bucket settings —
+      # deployment_spec is ignored by lifecycle below once the agent exists.
+      dynamic "env" {
+        for_each = local.agent_env
+        content {
+          name  = env.key
+          value = env.value
+        }
       }
     }
 

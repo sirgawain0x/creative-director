@@ -1,7 +1,7 @@
 name: creative-director-ai
 acli_version: 1.4.1
 agent_directory: .
-region: global
+region: us-east1
 base_template: adk
 language: typescript
 create_params:

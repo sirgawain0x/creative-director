@@ -145,5 +145,10 @@ vite.config.ts.timestamp-*
 # agents-cli eval traces / grade results
 artifacts/
 
+# Terraform local provider cache and state (not for deploy or git)
+deployment/terraform/**/.terraform/
+deployment/terraform/**/*.tfstate
+deployment/terraform/**/*.tfstate.*
+
 # Local IDE / accidental CLI artifacts
 .cursor/

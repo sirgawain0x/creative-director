@@ -26,3 +26,14 @@ resource "google_storage_bucket" "logs_data_bucket" {
 
   depends_on = [resource.google_project_service.services]
 }
+
+resource "google_storage_bucket" "renders_data_bucket" {
+  count = var.creative_director_mode == "production" && var.renders_gcs_bucket_name == null ? 1 : 0
+
+  name                        = local.renders_bucket_name
+  location                    = var.region
+  project                     = var.project_id
+  uniform_bucket_level_access = true
+
+  depends_on = [resource.google_project_service.services]
+}

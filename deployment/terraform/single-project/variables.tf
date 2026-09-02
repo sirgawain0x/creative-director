@@ -47,3 +47,51 @@ variable "app_sa_roles" {
     "roles/serviceusage.serviceUsageConsumer",
   ]
 }
+
+variable "creative_director_mode" {
+  type        = string
+  description = "Agent mode: planning (research/storyboard) or production (real generate_video_cut via Vertex + GCS)."
+  default     = "planning"
+
+  validation {
+    condition     = contains(["planning", "production"], var.creative_director_mode)
+    error_message = "creative_director_mode must be planning or production."
+  }
+}
+
+variable "vertex_location" {
+  type        = string
+  description = "Vertex AI region for Gemini image + Veo video LRO (must match a Veo-supported location)."
+  default     = "us-central1"
+}
+
+variable "renders_gcs_bucket_name" {
+  type        = string
+  description = "GCS bucket for rendered video clips. When null, defaults to {project_id}-creative-pixels-renders."
+  default     = null
+}
+
+variable "veo_tier" {
+  type        = string
+  description = "Optional Veo tier override (standard, fast, lite). Leave empty for tool default (standard)."
+  default     = ""
+}
+
+variable "veo_quality" {
+  type        = string
+  description = "Optional Veo output quality (720p, 1080p, 4K). Leave empty for tool default (720p)."
+  default     = ""
+}
+
+variable "pixels_headless_url" {
+  type        = string
+  description = "Pixels headless Cloud Run base URL for assemble_and_sync_timeline (Phase 2)."
+  default     = ""
+}
+
+variable "pixels_headless_api_key" {
+  type        = string
+  description = "Bearer token for Pixels headless API (PIXELS_API_KEY on the Cloud Run service)."
+  default     = ""
+  sensitive   = true
+}

@@ -1,0 +1,23 @@
+# Agent Runtime source package must stay under 8MB. Exclude infra, dev, and caches.
+
+# Terraform local provider cache + state (deployment/ alone can be 200MB+)
+deployment/
+
+# Installed in the container via `npm ci` in Dockerfile
+node_modules/
+
+# Tests, eval traces, IDE
+tests/
+artifacts/
+.cursor/
+.vscode/
+
+# Local secrets
+.env
+.env.*
+
+# Docs and scratch outputs (not needed at runtime)
+*.md
+
+# Git metadata (also excluded by agents-cli defaults)
+.git/
