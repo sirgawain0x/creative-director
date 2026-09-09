@@ -224,6 +224,36 @@ Local dev scripts (`adk:run`, `adk:web`, `adk:api`) pass `--otel_to_cloud`. Copy
 
 Prompt and response content appears in **Cloud Logging** events (`EVENT_ONLY`), not in trace span attributes. Ensure you have end-user consent and data handling policies in place before collecting this data in production.
 
+## Genre catalog
+
+Briefs resolve through a hybrid catalog: deep markdown packs, family templates, or a generic craft fallback (`select_genre_pack` / `resolveGenrePack`).
+
+Data lives in [`data/genres/catalog.json`](data/genres/catalog.json) and [`data/genres/families.json`](data/genres/families.json). Deep packs live under [`skills/genres/`](skills/genres/).
+
+### Extend the catalog
+
+1. **Add aliases** — edit `data/genres/catalog.json`. Add strings to `appleAliases` and/or `spotifyAliases` on an existing entry (or add a new entry with `id`, `label`, aliases, and `family`). Matching uses `normalizeGenreKey` (`&` → `and`, hyphens/underscores → spaces).
+2. **Template-only genres** — set `family` to one of: `urban`, `electronic`, `pop`, `rock`, `acoustic`, `global`, `metal`, `dance`, `jazz-soul`, `experimental`. Omit `deepPack` so resolution expands that family template at runtime.
+3. **Promote to deep** — add `skills/genres/<id>.md` with these four headers, then set `"deepPack": "<id>"` on the catalog entry:
+
+```markdown
+# [Genre Label] Visual Bible
+
+## Visual Palette
+...
+
+## Core Motifs
+...
+
+## Camera & Pacing
+...
+
+## Narrative & Stylistic Directives
+...
+```
+
+Catalog updates are PR-based JSON/markdown edits (no live Spotify/Apple sync in v1).
+
 ## Clean up
 
 Delete the Reasoning Engine / Agent Engine resource in Cloud Console, or use the Agent Platform SDK `delete(force=True)` equivalent for your deployment ID, to avoid ongoing charges.
