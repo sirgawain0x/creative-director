@@ -228,9 +228,20 @@ export function resolveGenrePack(brief: string): GenrePackResolution {
   );
 }
 
-/** Thin transition helper: returns packId from the catalog resolver. */
-export function resolveGenre(brief: string): string {
-  return resolveGenrePack(brief).packId;
+/**
+ * Transition helper for callers still typed to GenreId (e.g. loadGenrePack).
+ * Only deep dark-pop / hip-hop pass through; template/family/generic → 'generic'
+ * until select_genre_pack is rewired to resolveGenrePack (Task 5).
+ */
+export function resolveGenre(brief: string): GenreId {
+  const {source, packId} = resolveGenrePack(brief);
+  if (
+    source === 'deep' &&
+    (packId === 'dark-pop' || packId === 'hip-hop')
+  ) {
+    return packId;
+  }
+  return 'generic';
 }
 
 export function genreSkillRelPath(genre: GenreId): string {

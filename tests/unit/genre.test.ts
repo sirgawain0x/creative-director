@@ -165,7 +165,7 @@ describe('resolveGenrePack', () => {
 });
 
 describe('resolveGenre', () => {
-  it('returns packId from resolveGenrePack', () => {
+  it('returns GenreId-safe deep packs only during transition', () => {
     expect(resolveGenre('30-second dark synthwave intro at 120 BPM')).toBe(
       'dark-pop',
     );
@@ -173,6 +173,22 @@ describe('resolveGenre', () => {
       'hip-hop',
     );
     expect(resolveGenre('asdfqwer zxcv music brief')).toBe('generic');
+  });
+
+  it('maps template/family hits to generic until select_genre_pack rewires', () => {
+    expect(resolveGenre('shoegaze dream video')).toBe('generic');
+    expect(resolveGenre('a folk waltz in a sunlit kitchen')).toBe('generic');
+
+    // resolveGenrePack still surfaces full template/warning details
+    const shoegaze = resolveGenrePack('shoegaze dream video');
+    expect(shoegaze.source).toBe('template');
+    expect(shoegaze.pack).toContain('(Family:');
+
+    const folk = resolveGenrePack('a folk waltz in a sunlit kitchen');
+    expect(folk.catalogGenre).toBe('folk');
+    expect(folk.source).toBe('template');
+    expect(folk.packId).toBe('acoustic');
+    expect(folk.warning).toMatch(/Deep pack file missing for folk/);
   });
 });
 
