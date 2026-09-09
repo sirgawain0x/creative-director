@@ -98,8 +98,8 @@
   {
     "id": "indie",
     "label": "Indie",
-    "appleAliases": ["Indie", "Indie Rock", "Alternative"],
-    "spotifyAliases": ["indie", "indie rock", "alternative"],
+    "appleAliases": ["Indie", "Indie Rock", "Alternative Rock"],
+    "spotifyAliases": ["indie", "indie rock", "alternative rock"],
     "family": "rock",
     "deepPack": "indie"
   },
@@ -194,8 +194,8 @@
   {
     "id": "classical-cinematic",
     "label": "Classical Cinematic",
-    "appleAliases": ["Classical", "Cinematic", "Film Score", "Orchestral"],
-    "spotifyAliases": ["classical", "cinematic", "film score", "orchestral"],
+    "appleAliases": ["Classical", "Classical Cinematic", "Film Score", "Orchestral Score"],
+    "spotifyAliases": ["classical", "classical cinematic", "film score", "orchestral score"],
     "family": "experimental",
     "deepPack": "classical-cinematic"
   },

@@ -91,13 +91,13 @@ Examples that must collide to the same key: `R&B`, `r-and-b`, `r and b`, `R And 
 
 ### Resolution order
 1. Exact alias match after normalization (Apple or Spotify) → catalog entry  
-2. Substring / token match of normalized aliases inside the normalized brief (prefer **longest** matching alias string)  
+2. **Token / word-boundary** match of normalized aliases inside the normalized brief (not raw substring): the alias must equal the brief or appear as whole space-delimited token(s), so `trap` does not match `trapped` and bare adjectives like `cinematic` should not be catalog aliases unless qualified (prefer **longest** matching alias string)  
 3. Family template from matched entry (or best family guess from tokens)  
 4. Generic craft pack  
 
 **Tie-break** when multiple aliases share identical specificity (same match length): prefer entries with `deepPack` over template-only; then sort alphabetically by catalog `id` and take the first.
 
-Missing deep pack file for an entry marked `deepPack`: fall back to that entry’s family template, set `source: 'template'`, and set `warning` to a clear string (e.g. `Deep pack file missing for dark-pop; using family electronic template.`).
+Missing deep pack file for an entry marked `deepPack`: fall back to that entry’s family template, set `source: 'template'`, and set `warning` to a clear string (e.g. `Deep pack file missing for dark-pop; using family electronic template.`). Unknown style family on the template path: fall back to generic craft with `warning` (do not throw). Missing `craft/music-video.md` on the generic path: use a stub pack and set `warning`.
 
 ## Deep packs (v1 target)
 Keep: `dark-pop`, `hip-hop`

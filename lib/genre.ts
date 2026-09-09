@@ -115,6 +115,21 @@ export type GenreId = (typeof GENRE_IDS)[number];
 
 type AliasHit = {entry: CatalogEntry; alias: string; length: number};
 
+const GENERIC_CRAFT_REL = 'craft/music-video.md';
+const GENERIC_CRAFT_STUB =
+  '# Music Video\n\n## Visual Palette\nGeneric.';
+
+/** True when normalized alias equals the brief or appears as whole token(s). */
+export function aliasMatchesNormBrief(
+  normBrief: string,
+  normAlias: string,
+): boolean {
+  if (!normAlias) return false;
+  if (normBrief === normAlias) return true;
+  const escaped = normAlias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|\\s)${escaped}(?=\\s|$)`).test(normBrief);
+}
+
 function collectHits(normBrief: string, catalog: CatalogEntry[]): AliasHit[] {
   const hits: AliasHit[] = [];
   for (const entry of catalog) {
@@ -126,7 +141,7 @@ function collectHits(normBrief: string, catalog: CatalogEntry[]): AliasHit[] {
     ]) {
       const na = normalizeGenreKey(alias);
       if (!na) continue;
-      if (normBrief === na || normBrief.includes(na)) {
+      if (aliasMatchesNormBrief(normBrief, na)) {
         hits.push({entry, alias, length: na.length});
       }
     }
@@ -144,15 +159,33 @@ function sortHits(hits: AliasHit[]): void {
   });
 }
 
-function templateForEntry(
+function tryTemplateForEntry(
   entry: CatalogEntry,
   families: Record<string, StyleFamily>,
-): string {
+): string | null {
   const family = families[entry.family];
-  if (!family) {
-    throw new Error(`Unknown style family: ${entry.family}`);
-  }
+  if (!family) return null;
   return expandFamilyTemplate(entry.label, entry.family, family);
+}
+
+function genericResolution(
+  loadPack: (relPath: string) => string | null,
+  warning?: string,
+): GenrePackResolution {
+  const craft = loadPack(GENERIC_CRAFT_REL);
+  const warnings = [
+    warning,
+    craft
+      ? undefined
+      : `Generic craft pack missing: ${GENERIC_CRAFT_REL}; using stub.`,
+  ].filter((w): w is string => Boolean(w));
+  return {
+    catalogGenre: 'generic',
+    packId: 'generic',
+    source: 'generic',
+    pack: craft ?? GENERIC_CRAFT_STUB,
+    ...(warnings.length > 0 ? {warning: warnings.join(' ')} : {}),
+  };
 }
 
 /**
@@ -169,15 +202,7 @@ export function resolveGenrePackFromData(
   const hits = collectHits(normBrief, catalog);
 
   if (hits.length === 0) {
-    const pack =
-      loadPack('craft/music-video.md') ??
-      '# Music Video\n\n## Visual Palette\nGeneric.';
-    return {
-      catalogGenre: 'generic',
-      packId: 'generic',
-      source: 'generic',
-      pack,
-    };
+    return genericResolution(loadPack);
   }
 
   sortHits(hits);
@@ -200,21 +225,42 @@ export function resolveGenrePackFromData(
         aliasesMatched,
       };
     }
+    const template = tryTemplateForEntry(best.entry, families);
+    if (template) {
+      return {
+        catalogGenre: best.entry.id,
+        packId: best.entry.family,
+        source: 'template',
+        pack: template,
+        aliasesMatched,
+        warning: `Deep pack file missing for ${best.entry.deepPack}; using family ${best.entry.family} template.`,
+      };
+    }
+    return {
+      ...genericResolution(
+        loadPack,
+        `Deep pack file missing for ${best.entry.deepPack} and unknown style family: ${best.entry.family}; using generic craft pack.`,
+      ),
+      aliasesMatched,
+    };
+  }
+
+  const template = tryTemplateForEntry(best.entry, families);
+  if (template) {
     return {
       catalogGenre: best.entry.id,
       packId: best.entry.family,
       source: 'template',
-      pack: templateForEntry(best.entry, families),
+      pack: template,
       aliasesMatched,
-      warning: `Deep pack file missing for ${best.entry.deepPack}; using family ${best.entry.family} template.`,
     };
   }
 
   return {
-    catalogGenre: best.entry.id,
-    packId: best.entry.family,
-    source: 'template',
-    pack: templateForEntry(best.entry, families),
+    ...genericResolution(
+      loadPack,
+      `Unknown style family: ${best.entry.family}; using generic craft pack.`,
+    ),
     aliasesMatched,
   };
 }

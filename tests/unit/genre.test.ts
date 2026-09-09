@@ -157,6 +157,60 @@ describe('resolveGenrePack', () => {
     );
     expect(r.pack).toContain('(Family: experimental)');
   });
+
+  it('token-matches cinematic hip-hop to hip-hop, not classical-cinematic', () => {
+    const r = resolveGenrePack(
+      'a cinematic hip-hop video, night streets, 92 BPM',
+    );
+    expect(r.catalogGenre).toBe('hip-hop');
+    expect(r.source).toBe('deep');
+    expect(r.packId).toBe('hip-hop');
+  });
+
+  it('does not match Trap inside trapped', () => {
+    const r = resolveGenrePack('trapped in a mirror maze');
+    expect(r.catalogGenre).not.toBe('hip-hop');
+    expect(r.source).toBe('generic');
+  });
+
+  it('falls back to generic with warning when style family is unknown', () => {
+    const catalog: CatalogEntry[] = [
+      {
+        id: 'orphan-genre',
+        label: 'Orphan Genre',
+        appleAliases: ['orphangenrex'],
+        spotifyAliases: [],
+        family: 'does-not-exist-family',
+      },
+    ];
+    const r = resolveGenrePackFromData(
+      'orphangenrex brief',
+      catalog,
+      {},
+      (rel) =>
+        rel === 'craft/music-video.md'
+          ? '# Music Video\n\n## Visual Palette\nGeneric craft.'
+          : null,
+    );
+    expect(r.source).toBe('generic');
+    expect(r.catalogGenre).toBe('generic');
+    expect(r.packId).toBe('generic');
+    expect(r.warning).toMatch(/Unknown style family: does-not-exist-family/);
+    expect(r.pack).toContain('Generic craft');
+  });
+
+  it('warns when generic craft pack file is missing', () => {
+    const r = resolveGenrePackFromData(
+      'asdfqwer zxcv music brief',
+      [],
+      {},
+      () => null,
+    );
+    expect(r.source).toBe('generic');
+    expect(r.packId).toBe('generic');
+    expect(r.warning).toMatch(/craft\/music-video\.md/);
+    expect(r.pack).toContain('## Visual Palette');
+  });
 });
 
 describe('resolveGenre', () => {
