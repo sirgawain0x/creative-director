@@ -11,6 +11,7 @@ import {
   type CatalogEntry,
   type StyleFamily,
 } from '../../lib/genre.js';
+import {loadSkill} from '../../lib/skills.js';
 
 describe('normalizeGenreKey', () => {
   it('collapses r&b variants', () => {
@@ -34,28 +35,22 @@ describe('resolveGenrePack', () => {
     expect(r.pack).toContain('## Visual Palette');
   });
 
-  it('maps r&b spelling variants to the same catalog entry', () => {
-    const briefs = ['R&B music video', 'r-and-b video', 'r and b video'];
+  it('maps r&b spelling variants to the same deep pack', () => {
+    const briefs = [
+      'R&B music video',
+      'r-and-b video',
+      'r and b video',
+      'r and b music video',
+    ];
     const results = briefs.map((brief) => resolveGenrePack(brief));
     for (const r of results) {
       expect(r.catalogGenre).toBe('r-and-b');
+      expect(r.source).toBe('deep');
+      expect(r.packId).toBe('r-and-b');
+      expect(r.warning).toBeUndefined();
     }
     expect(new Set(results.map((r) => r.packId)).size).toBe(1);
-    // Deep file lands in Task 4; until then missing pack → family template + warning.
-    expect(results[0]!.source).toBe('template');
-    expect(results[0]!.warning).toMatch(/Deep pack file missing for r-and-b/);
-
-    const withPack = resolveGenrePackFromData(
-      'R&B music video',
-      loadGenreCatalog(),
-      loadStyleFamilies(),
-      (rel) =>
-        rel === 'genres/r-and-b.md'
-          ? '# R&B\n\n## Visual Palette\nok'
-          : null,
-    );
-    expect(withPack.packId).toBe('r-and-b');
-    expect(withPack.source).toBe('deep');
+    expect(results[0]!.pack).toContain('## Visual Palette');
   });
 
   it('uses family template for non-deep catalog genres', () => {
@@ -70,13 +65,13 @@ describe('resolveGenrePack', () => {
     expect(r.packId).toBe('generic');
   });
 
-  it('resolves folk with missing deep pack to template plus warning', () => {
+  it('resolves folk to its deep pack when the file exists', () => {
     const r = resolveGenrePack('a folk waltz in a sunlit kitchen');
     expect(r.catalogGenre).toBe('folk');
-    expect(r.source).toBe('template');
-    expect(r.packId).toBe('acoustic');
-    expect(r.warning).toMatch(/Deep pack file missing for folk/);
-    expect(r.pack).toContain('(Family: acoustic)');
+    expect(r.source).toBe('deep');
+    expect(r.packId).toBe('folk');
+    expect(r.warning).toBeUndefined();
+    expect(r.pack).toContain('## Visual Palette');
   });
 
   it('tie-breaks equal matches alphabetically by id after deep preference', () => {
@@ -175,20 +170,19 @@ describe('resolveGenre', () => {
     expect(resolveGenre('asdfqwer zxcv music brief')).toBe('generic');
   });
 
-  it('maps template/family hits to generic until select_genre_pack rewires', () => {
+  it('maps non-GenreId deep and template hits to generic until select_genre_pack rewires', () => {
     expect(resolveGenre('shoegaze dream video')).toBe('generic');
+    // folk is deep in resolveGenrePack, but not a GenreId yet → generic
     expect(resolveGenre('a folk waltz in a sunlit kitchen')).toBe('generic');
 
-    // resolveGenrePack still surfaces full template/warning details
     const shoegaze = resolveGenrePack('shoegaze dream video');
     expect(shoegaze.source).toBe('template');
     expect(shoegaze.pack).toContain('(Family:');
 
     const folk = resolveGenrePack('a folk waltz in a sunlit kitchen');
     expect(folk.catalogGenre).toBe('folk');
-    expect(folk.source).toBe('template');
-    expect(folk.packId).toBe('acoustic');
-    expect(folk.warning).toMatch(/Deep pack file missing for folk/);
+    expect(folk.source).toBe('deep');
+    expect(folk.packId).toBe('folk');
   });
 });
 
@@ -250,5 +244,20 @@ describe('loadGenreCatalog', () => {
     const deep = catalog.filter((e) => e.deepPack);
     expect(deep.length).toBe(25);
     expect(catalog.some((e) => e.id === 'shoegaze' && !e.deepPack)).toBe(true);
+  });
+
+  it('every deepPack file exists with standard headers', () => {
+    const catalog = loadGenreCatalog();
+    const required = [
+      '## Visual Palette',
+      '## Core Motifs',
+      '## Camera & Pacing',
+      '## Narrative & Stylistic Directives',
+    ];
+    for (const entry of catalog) {
+      if (!entry.deepPack) continue;
+      const pack = loadSkill(`genres/${entry.deepPack}.md`);
+      for (const h of required) expect(pack).toContain(h);
+    }
   });
 });
