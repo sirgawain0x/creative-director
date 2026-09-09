@@ -67,6 +67,24 @@ npm run typecheck
 | **Planning** (default) | unset or `CREATIVE_DIRECTOR_MODE=planning` | Research + storyboard only |
 | **Production** | `CREATIVE_DIRECTOR_MODE=production` | Full tool loop; video/C2PA tools are **mocks** |
 
+## Grafana Cloud MCP (optional)
+
+Wire Grafana into the director for render-pipeline observability (hackathon partner track–compatible). Tools are prefixed `grafana_`.
+
+| Env | Purpose |
+|-----|---------|
+| `GRAFANA_URL` | Your stack, e.g. `https://mystack.grafana.net` — uses hosted `https://mcp.grafana.com/mcp` (OAuth on first connect) |
+| `GRAFANA_MCP_URL` | Self-hosted / open-source Grafana MCP endpoint (preferred for unattended Agent Runtime) |
+| `GRAFANA_SERVICE_ACCOUNT_TOKEN` | Bearer token for self-hosted MCP |
+| `GRAFANA_CLOUD_MCP_URL` | Override hosted MCP URL (default `https://mcp.grafana.com/mcp`) |
+
+```bash
+# Local demo (browser OAuth once)
+GRAFANA_URL=https://YOUR_STACK.grafana.net npm run adk:web
+```
+
+Accept Grafana Assistant terms in your Cloud account first. Hosted MCP has no machine token — for Agent Runtime use open-source Grafana MCP + `GRAFANA_SERVICE_ACCOUNT_TOKEN`.
+
 ## Run locally
 
 ```bash

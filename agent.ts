@@ -2,13 +2,17 @@ import {AgentTool, FunctionTool, LlmAgent} from '@google/adk';
 import {z} from 'zod';
 import {dpAgent} from './agents/dp.js';
 import {
-  PLANNING_SWARM_INSTRUCTION,
+  planningSwarmInstruction,
   productionSwarmWorkflow,
 } from './agents/director-instructions.js';
 import {editorAgent} from './agents/editor.js';
 import {searchSpecialist, urlSpecialist} from './agents/research.js';
 import {specialistAgentTool} from './agents/specialist-tool.js';
 import {writerAgent} from './agents/writer.js';
+import {
+  createGrafanaMcpToolset,
+  isGrafanaMcpConfigured,
+} from './lib/grafana-mcp.js';
 import {resolveGenre} from './lib/genre.js';
 import {creativeDirectorModel} from './lib/model.js';
 import {
@@ -38,6 +42,9 @@ const provenanceEnabled =
   productionRenderEnabled && isProvenanceConfigured();
 const c2paEmbedEnabled =
   productionRenderEnabled && isC2paEmbedConfigured();
+const grafanaMcpEnabled = isGrafanaMcpConfigured();
+const grafanaMcpToolset = createGrafanaMcpToolset();
+const grafanaTools = grafanaMcpToolset ? [grafanaMcpToolset] : [];
 
 const selectGenrePackTool = new FunctionTool({
   name: 'select_genre_pack',
@@ -79,6 +86,7 @@ const researchTools = [
   dpTool,
   new AgentTool({agent: searchSpecialist}),
   new AgentTool({agent: urlSpecialist}),
+  ...grafanaTools,
 ];
 
 // ----------------------------------------------------------------------
@@ -210,7 +218,7 @@ const planningAgent = new LlmAgent({
   description:
     'Planning-mode Creative Director: swarm research and beat-synced storyboards only (no video render).',
   model: creativeDirectorModel,
-  instruction: PLANNING_SWARM_INSTRUCTION,
+  instruction: planningSwarmInstruction(),
   tools: researchTools,
 });
 
@@ -308,6 +316,7 @@ export {
   agentMode,
   dpAgent,
   editorAgent,
+  grafanaMcpEnabled,
   planningAgent,
   productionAgent,
   writerAgent,

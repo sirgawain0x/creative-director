@@ -27,5 +27,8 @@ v1 music-video production swarm on the existing TypeScript Creative Director: in
 ## HITL
 After Writer+DP, stop unless the user already approved rendering.
 
+## Grafana Cloud MCP
+Optional partner observability: set `GRAFANA_URL` (hosted OAuth MCP) or `GRAFANA_MCP_URL` + `GRAFANA_SERVICE_ACCOUNT_TOKEN` (self-hosted). Director gets filtered `grafana_*` tools for Loki/Tempo/Prometheus investigation of Veo/assembly failures. AI Observability alone does not satisfy the hackathon track — MCP connection does.
+
 ## Out of scope
 Livepeer, remote Cloud Run per department, sitcom/feature pipelines.
