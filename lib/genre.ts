@@ -1,4 +1,46 @@
+import {readFileSync} from 'node:fs';
+import {dirname, join} from 'node:path';
+import {fileURLToPath} from 'node:url';
+
 export type GenrePackSource = 'deep' | 'template' | 'generic';
+
+export type StyleFamily = {
+  palette: string;
+  motifs: string;
+  camera: string;
+  writer: string;
+};
+
+const dataRoot = join(dirname(fileURLToPath(import.meta.url)), '..', 'data', 'genres');
+
+export function loadStyleFamilies(): Record<string, StyleFamily> {
+  return JSON.parse(readFileSync(join(dataRoot, 'families.json'), 'utf8')) as Record<
+    string,
+    StyleFamily
+  >;
+}
+
+export function expandFamilyTemplate(
+  label: string,
+  familyId: string,
+  family: StyleFamily,
+): string {
+  return [
+    `# ${label} Visual Bible (Family: ${familyId})`,
+    '',
+    '## Visual Palette',
+    family.palette,
+    '',
+    '## Core Motifs',
+    family.motifs,
+    '',
+    '## Camera & Pacing',
+    family.camera,
+    '',
+    '## Narrative & Stylistic Directives',
+    family.writer,
+  ].join('\n');
+}
 
 export interface GenrePackResolution {
   catalogGenre: string;

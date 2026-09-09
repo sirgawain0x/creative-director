@@ -1,6 +1,8 @@
 import {describe, expect, it} from 'vitest';
 import {
+  expandFamilyTemplate,
   genreSkillRelPath,
+  loadStyleFamilies,
   normalizeGenreKey,
   resolveGenre,
 } from '../../lib/genre.js';
@@ -51,5 +53,49 @@ describe('genreSkillRelPath', () => {
     expect(genreSkillRelPath('dark-pop')).toBe('genres/dark-pop.md');
     expect(genreSkillRelPath('hip-hop')).toBe('genres/hip-hop.md');
     expect(genreSkillRelPath('generic')).toBe('craft/music-video.md');
+  });
+});
+
+describe('expandFamilyTemplate', () => {
+  it('emits required section headers', () => {
+    const families = loadStyleFamilies();
+    const md = expandFamilyTemplate('Afrobeats', 'global', families.global);
+    expect(md).toContain('# Afrobeats Visual Bible (Family: global)');
+    expect(md).toContain('## Visual Palette');
+    expect(md).toContain('## Core Motifs');
+    expect(md).toContain('## Camera & Pacing');
+    expect(md).toContain('## Narrative & Stylistic Directives');
+    for (const h of [
+      '## Visual Palette',
+      '## Core Motifs',
+      '## Camera & Pacing',
+      '## Narrative & Stylistic Directives',
+    ]) {
+      const idx = md.indexOf(h);
+      expect(idx).toBeGreaterThan(-1);
+      const after = md.slice(idx + h.length).trimStart();
+      expect(after.length).toBeGreaterThan(0);
+      expect(after.startsWith('#')).toBe(false);
+    }
+  });
+
+  it('expands every family with non-empty sections', () => {
+    const families = loadStyleFamilies();
+    for (const [familyId, family] of Object.entries(families)) {
+      const md = expandFamilyTemplate('Test Label', familyId, family);
+      expect(md).toContain(`# Test Label Visual Bible (Family: ${familyId})`);
+      for (const h of [
+        '## Visual Palette',
+        '## Core Motifs',
+        '## Camera & Pacing',
+        '## Narrative & Stylistic Directives',
+      ]) {
+        const idx = md.indexOf(h);
+        expect(idx).toBeGreaterThan(-1);
+        const after = md.slice(idx + h.length).trimStart();
+        expect(after.length).toBeGreaterThan(0);
+        expect(after.startsWith('#')).toBe(false);
+      }
+    }
   });
 });
