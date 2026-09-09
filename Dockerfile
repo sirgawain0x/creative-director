@@ -18,6 +18,8 @@ WORKDIR /app
 
 ENV GOOGLE_GENAI_USE_VERTEXAI=1
 ENV GOOGLE_CLOUD_LOCATION=global
+# So ADK temp-bundle createRequire can resolve optional peers (MCP SDK).
+ENV NODE_PATH=/app/node_modules
 
 # Agent Runtime telemetry (Cloud Trace + EVENT_ONLY prompt/response in logs)
 ENV GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true

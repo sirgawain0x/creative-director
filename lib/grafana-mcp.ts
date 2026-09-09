@@ -1,4 +1,6 @@
 /// <reference types="node" />
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
 import {MCPToolset} from '@google/adk';
 
 /** Default hosted Grafana Cloud MCP endpoint (Streamable HTTP). */
@@ -42,11 +44,14 @@ export function normalizeGrafanaStackUrl(raw: string): string {
 
 /**
  * Resolve how Grafana MCP should connect.
- * - `GRAFANA_URL` → hosted Cloud MCP + OAuth (X-Grafana-URL)
- * - `GRAFANA_MCP_URL` + optional `GRAFANA_SERVICE_ACCOUNT_TOKEN` → self-hosted / unattended
+ * - `GRAFANA_URL` → hosted Cloud MCP (X-Grafana-URL)
+ * - `GRAFANA_MCP_URL` → self-hosted / unattended
+ *
+ * ADK's Streamable HTTP transport does not perform interactive OAuth; a bearer
+ * token (`GRAFANA_SERVICE_ACCOUNT_TOKEN`) is required before tools are enabled.
  */
 export function resolveGrafanaMcpMode(): GrafanaMcpMode {
-  // Allow Agent Observability verify runs to skip Cloud MCP (needs interactive OAuth).
+  // Allow Agent Observability verify runs to skip Cloud MCP.
   if (process.env.AGENTO11Y_SKIP_GRAFANA_MCP?.trim() === '1') {
     return 'off';
   }
@@ -59,8 +64,29 @@ export function resolveGrafanaMcpMode(): GrafanaMcpMode {
   return 'off';
 }
 
+export function hasGrafanaMcpAuth(): boolean {
+  return Boolean(process.env.GRAFANA_SERVICE_ACCOUNT_TOKEN?.trim());
+}
+
+/**
+ * True when Grafana MCP env is set AND a service-account (or equivalent)
+ * bearer token is present. Without a token, enabling the toolset only produces
+ * 401s on every agent turn.
+ */
 export function isGrafanaMcpConfigured(): boolean {
-  return resolveGrafanaMcpMode() !== 'off';
+  return resolveGrafanaMcpMode() !== 'off' && hasGrafanaMcpAuth();
+}
+
+/** Whether ADK can createRequire the MCP SDK peer (used by MCPToolset). */
+export function isMcpSdkAvailable(): boolean {
+  try {
+    const require = createRequire(fileURLToPath(import.meta.url));
+    require.resolve('@modelcontextprotocol/sdk/client/index.js');
+    require.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function buildGrafanaMcpHeaders(): Record<string, string> {
@@ -96,17 +122,49 @@ export function resolveGrafanaMcpEndpoint(): string {
 }
 
 /**
- * Build an MCPToolset for Grafana when env is configured; otherwise null.
- * Cloud mode uses interactive OAuth on first connect (local demo / playground).
- * Self-hosted mode should set GRAFANA_SERVICE_ACCOUNT_TOKEN for unattended Agent Runtime.
+ * MCPToolset that never fails the agent turn if Grafana MCP is unreachable
+ * or the optional peer fails to load inside ADK's temp bundle.
+ */
+class ResilientGrafanaMcpToolset extends MCPToolset {
+  override async getTools(
+    context?: Parameters<MCPToolset['getTools']>[0],
+  ): ReturnType<MCPToolset['getTools']> {
+    try {
+      return await super.getTools(context);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[grafana-mcp] Tools unavailable (agent continues without them): ${message}`,
+      );
+      return [];
+    }
+  }
+}
+
+/**
+ * Build an MCPToolset for Grafana when endpoint + bearer token are set.
+ * Returns null when auth is missing or @modelcontextprotocol/sdk cannot load.
  */
 export function createGrafanaMcpToolset(): MCPToolset | null {
   if (!isGrafanaMcpConfigured()) {
+    const mode = resolveGrafanaMcpMode();
+    if (mode !== 'off' && !hasGrafanaMcpAuth()) {
+      console.warn(
+        '[grafana-mcp] Skipping Grafana MCP: set GRAFANA_SERVICE_ACCOUNT_TOKEN (ADK has no interactive OAuth).',
+      );
+    }
+    return null;
+  }
+
+  if (!isMcpSdkAvailable()) {
+    console.warn(
+      '[grafana-mcp] Skipping Grafana MCP: optional peer @modelcontextprotocol/sdk is not resolvable. Run: npm install @modelcontextprotocol/sdk',
+    );
     return null;
   }
 
   const headers = buildGrafanaMcpHeaders();
-  return new MCPToolset(
+  return new ResilientGrafanaMcpToolset(
     {
       type: 'StreamableHTTPConnectionParams',
       url: resolveGrafanaMcpEndpoint(),

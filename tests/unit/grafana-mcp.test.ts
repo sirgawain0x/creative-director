@@ -5,7 +5,9 @@ import {
   GRAFANA_PIPELINE_TOOL_FILTER,
   buildGrafanaMcpHeaders,
   createGrafanaMcpToolset,
+  hasGrafanaMcpAuth,
   isGrafanaMcpConfigured,
+  isMcpSdkAvailable,
   normalizeGrafanaStackUrl,
   resolveGrafanaMcpEndpoint,
   resolveGrafanaMcpMode,
@@ -34,29 +36,43 @@ describe('resolveGrafanaMcpMode', () => {
   it('is off when no Grafana env is set', () => {
     vi.stubEnv('GRAFANA_URL', '');
     vi.stubEnv('GRAFANA_MCP_URL', '');
+    vi.stubEnv('GRAFANA_SERVICE_ACCOUNT_TOKEN', '');
     expect(resolveGrafanaMcpMode()).toBe('off');
     expect(isGrafanaMcpConfigured()).toBe(false);
   });
 
-  it('uses cloud mode for GRAFANA_URL', () => {
+  it('uses cloud mode for GRAFANA_URL but stays unconfigured without token', () => {
     vi.stubEnv('GRAFANA_URL', 'https://mystack.grafana.net');
     vi.stubEnv('GRAFANA_MCP_URL', '');
+    vi.stubEnv('GRAFANA_SERVICE_ACCOUNT_TOKEN', '');
+    expect(resolveGrafanaMcpMode()).toBe('cloud');
+    expect(hasGrafanaMcpAuth()).toBe(false);
+    expect(isGrafanaMcpConfigured()).toBe(false);
+    expect(resolveGrafanaMcpEndpoint()).toBe(GRAFANA_CLOUD_MCP_URL);
+  });
+
+  it('is configured for cloud mode when token is present', () => {
+    vi.stubEnv('GRAFANA_URL', 'https://mystack.grafana.net');
+    vi.stubEnv('GRAFANA_MCP_URL', '');
+    vi.stubEnv('GRAFANA_SERVICE_ACCOUNT_TOKEN', 'glsa_test');
     expect(resolveGrafanaMcpMode()).toBe('cloud');
     expect(isGrafanaMcpConfigured()).toBe(true);
-    expect(resolveGrafanaMcpEndpoint()).toBe(GRAFANA_CLOUD_MCP_URL);
   });
 
   it('prefers self_hosted when GRAFANA_MCP_URL is set', () => {
     vi.stubEnv('GRAFANA_URL', 'https://mystack.grafana.net');
     vi.stubEnv('GRAFANA_MCP_URL', 'http://127.0.0.1:8000/mcp');
+    vi.stubEnv('GRAFANA_SERVICE_ACCOUNT_TOKEN', 'glsa_test');
     expect(resolveGrafanaMcpMode()).toBe('self_hosted');
     expect(resolveGrafanaMcpEndpoint()).toBe('http://127.0.0.1:8000/mcp');
+    expect(isGrafanaMcpConfigured()).toBe(true);
   });
 
   it('is off when AGENTO11Y_SKIP_GRAFANA_MCP=1 even with GRAFANA_URL', () => {
     vi.stubEnv('AGENTO11Y_SKIP_GRAFANA_MCP', '1');
     vi.stubEnv('GRAFANA_URL', 'https://mystack.grafana.net');
     vi.stubEnv('GRAFANA_MCP_URL', '');
+    vi.stubEnv('GRAFANA_SERVICE_ACCOUNT_TOKEN', 'glsa_test');
     expect(resolveGrafanaMcpMode()).toBe('off');
     expect(isGrafanaMcpConfigured()).toBe(false);
   });
@@ -109,12 +125,22 @@ describe('createGrafanaMcpToolset', () => {
   it('returns null when Grafana is not configured', () => {
     vi.stubEnv('GRAFANA_URL', '');
     vi.stubEnv('GRAFANA_MCP_URL', '');
+    vi.stubEnv('GRAFANA_SERVICE_ACCOUNT_TOKEN', '');
     expect(createGrafanaMcpToolset()).toBeNull();
   });
 
-  it('returns an MCPToolset when GRAFANA_URL is set', () => {
+  it('returns null when GRAFANA_URL is set without a token', () => {
     vi.stubEnv('GRAFANA_URL', 'https://mystack.grafana.net');
     vi.stubEnv('GRAFANA_MCP_URL', '');
+    vi.stubEnv('GRAFANA_SERVICE_ACCOUNT_TOKEN', '');
+    expect(createGrafanaMcpToolset()).toBeNull();
+  });
+
+  it('returns an MCPToolset when URL and token are set', () => {
+    vi.stubEnv('GRAFANA_URL', 'https://mystack.grafana.net');
+    vi.stubEnv('GRAFANA_MCP_URL', '');
+    vi.stubEnv('GRAFANA_SERVICE_ACCOUNT_TOKEN', 'glsa_test');
+    expect(isMcpSdkAvailable()).toBe(true);
     expect(createGrafanaMcpToolset()).toBeInstanceOf(MCPToolset);
   });
 });
