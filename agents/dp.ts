@@ -14,7 +14,7 @@ export function createDpAgent(): LlmAgent {
     model: creativeDirectorModel,
     instruction: `You are the music-video DP. Turn the Writer treatment into a beat-synced storyboard.
 
-The director pastes a genre visual bible in the message along with BPM and treatment. Apply that pack text. If none is pasted, use the generic music-video craft guidance below.
+The director pastes a genre visual bible in the message along with BPM and treatment. Apply that pack text. If none is pasted, use the generic music-video craft guidance below and note pack_applied: fallback at the top of your reply.
 
 Each scene MUST include: scene_index, timestamp_start, timestamp_end, camera_movement, lighting, visual_prompt.
 
@@ -23,6 +23,7 @@ STRICT RULES:
 - Do not rewrite the treatment; use it.
 - visual_prompt must be ready for generate_video_cut.
 - Do not reproduce copyrighted lyrics verbatim.
+- Start with pack_applied: yes|fallback so missing pack paste is visible.
 
 ### beat-sync
 ${beatSync}

@@ -5,7 +5,6 @@ import {
   loadGenreCatalog,
   loadStyleFamilies,
   normalizeGenreKey,
-  resolveGenre,
   resolveGenrePack,
   resolveGenrePackFromData,
   type CatalogEntry,
@@ -213,37 +212,10 @@ describe('resolveGenrePack', () => {
   });
 });
 
-describe('resolveGenre', () => {
-  it('returns GenreId-safe deep packs only during transition', () => {
-    expect(resolveGenre('30-second dark synthwave intro at 120 BPM')).toBe(
-      'dark-pop',
-    );
-    expect(resolveGenre('boom-bap hip-hop video, night streets, 92 BPM')).toBe(
-      'hip-hop',
-    );
-    expect(resolveGenre('asdfqwer zxcv music brief')).toBe('generic');
-  });
-
-  it('maps non-GenreId deep and template hits to generic for GenreId callers', () => {
-    expect(resolveGenre('shoegaze dream video')).toBe('generic');
-    // folk is deep in resolveGenrePack, but not a GenreId → generic
-    expect(resolveGenre('a folk waltz in a sunlit kitchen')).toBe('generic');
-
-    const shoegaze = resolveGenrePack('shoegaze dream video');
-    expect(shoegaze.source).toBe('template');
-    expect(shoegaze.pack).toContain('(Family:');
-
-    const folk = resolveGenrePack('a folk waltz in a sunlit kitchen');
-    expect(folk.catalogGenre).toBe('folk');
-    expect(folk.source).toBe('deep');
-    expect(folk.packId).toBe('folk');
-  });
-});
-
 describe('genreSkillRelPath', () => {
-  it('maps packs onto skill files', () => {
+  it('maps pack ids onto skill files', () => {
     expect(genreSkillRelPath('dark-pop')).toBe('genres/dark-pop.md');
-    expect(genreSkillRelPath('hip-hop')).toBe('genres/hip-hop.md');
+    expect(genreSkillRelPath('afrobeats')).toBe('genres/afrobeats.md');
     expect(genreSkillRelPath('generic')).toBe('craft/music-video.md');
   });
 });

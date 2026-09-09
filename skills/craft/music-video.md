@@ -1,6 +1,6 @@
 # Music video (generic)
 
-Use this pack when the brief is not dark-pop/electronic or hip-hop.
+Use this pack when no genre-specific deep pack or family template applies.
 
 ## Treatment
 - Logline, narrative arc (setup / escalation / release), and a short list of visual motifs.

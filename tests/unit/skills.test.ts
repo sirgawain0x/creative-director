@@ -18,4 +18,8 @@ describe('loadGenrePack', () => {
   it('returns generic craft rules for the fallback genre', () => {
     expect(loadGenrePack('generic')).toMatch(/treatment/i);
   });
+
+  it('loads any deep pack id from skills/genres', () => {
+    expect(loadGenrePack('afrobeats')).toMatch(/Visual Palette/);
+  });
 });

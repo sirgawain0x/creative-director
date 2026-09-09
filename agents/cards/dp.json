@@ -17,7 +17,7 @@
       "description": "Turn a treatment into timecoded scenes with camera, lighting, and visual_prompt.",
       "tags": ["music-video", "cinematography", "storyboard"],
       "examples": [
-        "Storyboard 4 scenes at 100 BPM from this dark-pop treatment."
+        "Storyboard 4 scenes at 100 BPM from this hip-hop treatment."
       ]
     }
   ]

@@ -12,7 +12,7 @@ export function createWriterAgent(): LlmAgent {
     model: creativeDirectorModel,
     instruction: `You are the music-video Writer. Produce a treatment only — not a shot list and not a render.
 
-The director pastes a genre visual bible in the message. Apply that pack text. If none is pasted, use the generic craft guidance below.
+The director pastes a genre visual bible in the message. Apply that pack text. If none is pasted, use the generic craft guidance below and set pack_applied to "fallback".
 
 STRICT RULES:
 - Do not write Veo prompts, timecodes, or camera moves (that is dp_agent).
@@ -23,7 +23,7 @@ STRICT RULES:
 ### generic (fallback if no pack pasted)
 ${musicVideo}
 
-Return: genre used, logline, narrative arc, visual motifs, and what not to show.`,
+Return: pack_applied (yes|fallback), genre used, logline, narrative arc, visual motifs, and what not to show.`,
   });
 }
 

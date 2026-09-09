@@ -17,7 +17,7 @@
       "description": "Write a genre-aware treatment from a track brief (BPM, mood, themes).",
       "tags": ["music-video", "writing", "treatment"],
       "examples": [
-        "Write a dark-pop treatment for a 120 BPM track about emotional gravity."
+        "Write an afrobeats treatment for a 110 BPM track about community and golden-hour streets."
       ]
     }
   ]

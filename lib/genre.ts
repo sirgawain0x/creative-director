@@ -109,10 +109,6 @@ export function normalizeGenreKey(input: string): string {
     .trim();
 }
 
-export const GENRE_IDS = ['dark-pop', 'hip-hop', 'generic'] as const;
-
-export type GenreId = (typeof GENRE_IDS)[number];
-
 type AliasHit = {entry: CatalogEntry; alias: string; length: number};
 
 const GENERIC_CRAFT_REL = 'craft/music-video.md';
@@ -274,25 +270,10 @@ export function resolveGenrePack(brief: string): GenrePackResolution {
   );
 }
 
-/**
- * Transition helper for callers still typed to GenreId (e.g. loadGenrePack).
- * Only deep dark-pop / hip-hop pass through; template/family/generic → 'generic'.
- * Prefer resolveGenrePack for new call sites (select_genre_pack already uses it).
- */
-export function resolveGenre(brief: string): GenreId {
-  const {source, packId} = resolveGenrePack(brief);
-  if (
-    source === 'deep' &&
-    (packId === 'dark-pop' || packId === 'hip-hop')
-  ) {
-    return packId;
-  }
-  return 'generic';
-}
-
-export function genreSkillRelPath(genre: GenreId): string {
-  if (genre === 'generic') {
+/** Skill-relative path for a pack id (`generic` → craft fallback). */
+export function genreSkillRelPath(packId: string): string {
+  if (packId === 'generic') {
     return 'craft/music-video.md';
   }
-  return `genres/${genre}.md`;
+  return `genres/${packId}.md`;
 }

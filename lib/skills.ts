@@ -1,7 +1,7 @@
 import {existsSync, readFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {genreSkillRelPath, type GenreId} from './genre.js';
+import {genreSkillRelPath} from './genre.js';
 
 /**
  * Resolve skills/ even when ADK loads the agent from a temp copy
@@ -34,8 +34,9 @@ export function loadSkill(relPath: string): string {
   return readFileSync(join(skillsRoot, normalized), 'utf8').trim();
 }
 
-export function loadGenrePack(genre: GenreId): string {
-  return loadSkill(genreSkillRelPath(genre));
+/** Load a genre deep pack or the generic craft fallback by pack id. */
+export function loadGenrePack(packId: string): string {
+  return loadSkill(genreSkillRelPath(packId));
 }
 
 export function skillsRootDir(): string {
