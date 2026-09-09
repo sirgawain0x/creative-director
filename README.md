@@ -207,7 +207,18 @@ After deploy, query the remote agent from the Cloud console or the Agent Engine 
 
 ## Observability
 
-Agent traces are enabled via OpenTelemetry. The deployed container sets:
+Agent traces use **standard OpenTelemetry OTLP exporters** (not the deprecated
+`@google-cloud/opentelemetry-cloud-*-exporter` packages).
+
+**Local / Grafana:** set `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_EXPORTER_OTLP_HEADERS`
+(and Agent Observability `AGENTO11Y_*` vars). ADK enables OTLP automatically when those
+env vars are present — scripts no longer pass `--otel_to_cloud`.
+
+**Optional Cloud Trace via OTLP:** set `GOOGLE_CLOUD_OTLP_TELEMETRY=1` to also export
+to `https://telemetry.googleapis.com` with Application Default Credentials (see
+[Google’s OTLP migration guide](https://github.com/GoogleCloudPlatform/opentelemetry-operations-js/blob/main/MIGRATION.md)).
+
+The deployed container sets:
 
 | Variable | Value |
 |----------|-------|
@@ -215,12 +226,13 @@ Agent traces are enabled via OpenTelemetry. The deployed container sets:
 | `OTEL_SEMCONV_STABILITY_OPT_IN` | `gen_ai_latest_experimental` |
 | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | `EVENT_ONLY` |
 
-Local dev scripts (`adk:run`, `adk:web`, `adk:api`) pass `--otel_to_cloud`. Copy the telemetry vars from [`.env.example`](.env.example) into your `.env` for full parity.
+Copy the telemetry vars from [`.env.example`](.env.example) into your `.env` for full parity.
 
 **View traces (deployed agent):**
 
 1. [Agent Platform Deployments](https://console.cloud.google.com/vertex-ai/agents/agent-engines) → select your instance → **Traces** tab (Session view or Span view).
 2. Fallback: [Cloud Console → Trace → Trace explorer](https://console.cloud.google.com/traces).
+3. Local Grafana Agent Observability: your stack’s Agent Observability app + Tempo.
 
 Prompt and response content appears in **Cloud Logging** events (`EVENT_ONLY`), not in trace span attributes. Ensure you have end-user consent and data handling policies in place before collecting this data in production.
 

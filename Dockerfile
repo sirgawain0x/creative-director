@@ -39,4 +39,4 @@ USER myuser
 
 EXPOSE 8080
 
-CMD ["npx", "adk", "api_server", "agent.ts", "--port", "8080", "--host", "0.0.0.0", "--otel_to_cloud"]
+CMD ["npx", "adk", "api_server", "agent.ts", "--port", "8080", "--host", "0.0.0.0"]

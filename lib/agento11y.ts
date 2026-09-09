@@ -11,10 +11,20 @@ import {resourceFromAttributes} from '@opentelemetry/resources';
 import {
   MeterProvider,
   PeriodicExportingMetricReader,
+  type MetricReader,
 } from '@opentelemetry/sdk-metrics';
-import {BatchSpanProcessor} from '@opentelemetry/sdk-trace-base';
+import {
+  BatchSpanProcessor,
+  type SpanProcessor,
+} from '@opentelemetry/sdk-trace-base';
 import {NodeTracerProvider} from '@opentelemetry/sdk-trace-node';
 import {config as loadDotenv} from 'dotenv';
+import {
+  createGcpOtlpMetricReader,
+  createGcpOtlpSpanProcessor,
+  getGcpOtlpResource,
+  isGcpOtlpTelemetryEnabled,
+} from './otel-gcp-otlp.js';
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(moduleDir, '..');
@@ -179,27 +189,67 @@ export type Agento11yProviders = {
 
 /**
  * Create OTel TracerProvider + MeterProvider before the Agent Observability client.
- * Exporters read OTEL_EXPORTER_OTLP_ENDPOINT / OTEL_EXPORTER_OTLP_HEADERS from env.
+ * Grafana exporters read OTEL_EXPORTER_OTLP_ENDPOINT / OTEL_EXPORTER_OTLP_HEADERS.
+ * When GOOGLE_CLOUD_OTLP_TELEMETRY is set, also export to telemetry.googleapis.com
+ * via standard OTLP (replaces deprecated --otel_to_cloud GCP exporters).
  */
-export function setupAgento11yOtel(): Agento11yProviders {
-  const resource = resourceFromAttributes({
+export async function setupAgento11yOtel(): Promise<Agento11yProviders> {
+  const baseResource = resourceFromAttributes({
     'service.name': AGENTO11Y_AGENT_NAME,
     'service.version': AGENTO11Y_AGENT_VERSION,
   });
+  const resource = isGcpOtlpTelemetryEnabled()
+    ? baseResource.merge(getGcpOtlpResource())
+    : baseResource;
+
+  const spanProcessors: SpanProcessor[] = [
+    new BatchSpanProcessor(new OTLPTraceExporter()),
+  ];
+  const readers: MetricReader[] = [
+    new PeriodicExportingMetricReader({
+      exporter: new OTLPMetricExporter(),
+    }),
+  ];
+
+  if (isGcpOtlpTelemetryEnabled()) {
+    spanProcessors.push(await createGcpOtlpSpanProcessor());
+    readers.push(await createGcpOtlpMetricReader());
+  }
 
   const tracerProvider = new NodeTracerProvider({
     resource,
-    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
+    spanProcessors,
   });
   tracerProvider.register();
 
   const meterProvider = new MeterProvider({
     resource,
-    readers: [
-      new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter(),
-      }),
-    ],
+    readers,
+  });
+  metrics.setGlobalMeterProvider(meterProvider);
+
+  return {tracerProvider, meterProvider};
+}
+
+/**
+ * GCP Telemetry API OTLP only (no Grafana Agent Observability).
+ * Used when GOOGLE_CLOUD_OTLP_TELEMETRY is set but AGENTO11Y_* is incomplete.
+ */
+export async function setupGcpOtlpProvidersOnly(): Promise<Agento11yProviders> {
+  const resource = resourceFromAttributes({
+    'service.name': AGENTO11Y_AGENT_NAME,
+    'service.version': AGENTO11Y_AGENT_VERSION,
+  }).merge(getGcpOtlpResource());
+
+  const tracerProvider = new NodeTracerProvider({
+    resource,
+    spanProcessors: [await createGcpOtlpSpanProcessor()],
+  });
+  tracerProvider.register();
+
+  const meterProvider = new MeterProvider({
+    resource,
+    readers: [await createGcpOtlpMetricReader()],
   });
   metrics.setGlobalMeterProvider(meterProvider);
 
@@ -226,9 +276,9 @@ export function isAgento11yConfigured(): boolean {
 
 /**
  * Bootstrap Agent Observability: OTel providers, SDK client, Google ADK plugin.
- * Returns configured=false (and no-op providers skipped) when env is incomplete.
+ * Returns null when AGENTO11Y_* / OTEL_* env is incomplete.
  */
-export function createAgento11yBootstrap(): Agento11yBootstrap | null {
+export async function createAgento11yBootstrap(): Promise<Agento11yBootstrap | null> {
   if (!isAgento11yConfigured()) {
     return null;
   }
@@ -237,7 +287,7 @@ export function createAgento11yBootstrap(): Agento11yBootstrap | null {
   process.env.AGENTO11Y_PROTOCOL ??= 'http';
   process.env.AGENTO11Y_AUTH_MODE ??= 'basic';
 
-  const providers = setupAgento11yOtel();
+  const providers = await setupAgento11yOtel();
   const client = new Agento11yClient();
   const rawPlugin = createAgento11yGoogleAdkPlugin(client, {
     providerResolver: 'auto',
