@@ -1,4 +1,4 @@
-import {AgentTool, FunctionTool, LlmAgent} from '@google/adk';
+import {AgentTool, App, FunctionTool, LlmAgent} from '@google/adk';
 import {z} from 'zod';
 import {dpAgent} from './agents/dp.js';
 import {
@@ -9,6 +9,10 @@ import {editorAgent} from './agents/editor.js';
 import {searchSpecialist, urlSpecialist} from './agents/research.js';
 import {specialistAgentTool} from './agents/specialist-tool.js';
 import {writerAgent} from './agents/writer.js';
+import {
+  AGENTO11Y_AGENT_NAME,
+  createAgento11yBootstrap,
+} from './lib/agento11y.js';
 import {
   createGrafanaMcpToolset,
   isGrafanaMcpConfigured,
@@ -312,8 +316,22 @@ ${MOCK_PIPELINE_RULES}`)}`,
 export const rootAgent =
   agentMode === 'production' ? productionAgent : planningAgent;
 
+const agento11yBootstrap = createAgento11yBootstrap();
+const agento11yPlugins = agento11yBootstrap ? [agento11yBootstrap.plugin] : [];
+
+/**
+ * Preferred entry for ADK Dev UI / Runner — carries Agent Observability plugins
+ * when AGENTO11Y_* + OTEL_* env are set.
+ */
+export const app = new App({
+  name: AGENTO11Y_AGENT_NAME,
+  rootAgent,
+  plugins: agento11yPlugins,
+});
+
 export {
   agentMode,
+  agento11yBootstrap,
   dpAgent,
   editorAgent,
   grafanaMcpEnabled,

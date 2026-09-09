@@ -71,19 +71,46 @@ npm run typecheck
 
 Wire Grafana into the director for render-pipeline observability (hackathon partner track–compatible). Tools are prefixed `grafana_`.
 
+**Activate (local):**
+
+1. In Grafana Cloud (`https://thecreative.grafana.net`), accept **Grafana Assistant** terms (admin). Editor+ has MCP access by default.
+2. Ensure `.env` has `GRAFANA_URL=https://thecreative.grafana.net` (no `GRAFANA_MCP_URL` for Cloud OAuth).
+3. Run `npm run adk:web` — complete browser OAuth on first MCP connect (deny write if query-only).
+4. Ask the director to list datasources or query Loki; expect `grafana_*` tools.
+
 | Env | Purpose |
 |-----|---------|
-| `GRAFANA_URL` | Your stack, e.g. `https://mystack.grafana.net` — uses hosted `https://mcp.grafana.com/mcp` (OAuth on first connect) |
+| `GRAFANA_URL` | Your stack, e.g. `https://thecreative.grafana.net` — uses hosted `https://mcp.grafana.com/mcp` (OAuth on first connect) |
 | `GRAFANA_MCP_URL` | Self-hosted / open-source Grafana MCP endpoint (preferred for unattended Agent Runtime) |
 | `GRAFANA_SERVICE_ACCOUNT_TOKEN` | Bearer token for self-hosted MCP |
 | `GRAFANA_CLOUD_MCP_URL` | Override hosted MCP URL (default `https://mcp.grafana.com/mcp`) |
 
 ```bash
-# Local demo (browser OAuth once)
-GRAFANA_URL=https://YOUR_STACK.grafana.net npm run adk:web
+# Confirm Cloud MCP env (no secrets printed)
+npm run grafana:verify
+
+# Local demo (browser OAuth once on first grafana_* tool use)
+npm run adk:web
 ```
 
-Accept Grafana Assistant terms in your Cloud account first. Hosted MCP has no machine token — for Agent Runtime use open-source Grafana MCP + `GRAFANA_SERVICE_ACCOUNT_TOKEN`.
+Open http://localhost:8000/dev-ui/ — select **agent**, then ask to list Grafana datasources. Complete OAuth in the browser when prompted.
+
+### Agent Runtime Grafana
+
+1. Create a Grafana service account + token (`glsa_…`) with Viewer/Editor as needed.
+2. Run open-source Grafana MCP against `https://thecreative.grafana.net` (token auth).
+3. Update runtime env (requires deploy approval):
+
+```bash
+# Dry-run the update-env-vars command (token redacted in output):
+# export GRAFANA_MCP_URL='https://YOUR_MCP_HOST/mcp'
+# export GRAFANA_SERVICE_ACCOUNT_TOKEN='glsa_...'
+# ./scripts/grafana-runtime-env.example.sh
+
+agents-cli deploy --update-env-vars "GRAFANA_MCP_URL=https://YOUR_MCP_HOST/mcp,GRAFANA_SERVICE_ACCOUNT_TOKEN=glsa_..."
+```
+
+`GRAFANA_MCP_URL` takes precedence over `GRAFANA_URL` in [`lib/grafana-mcp.ts`](lib/grafana-mcp.ts).
 
 ## Run locally
 

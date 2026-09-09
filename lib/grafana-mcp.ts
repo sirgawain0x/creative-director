@@ -46,6 +46,10 @@ export function normalizeGrafanaStackUrl(raw: string): string {
  * - `GRAFANA_MCP_URL` + optional `GRAFANA_SERVICE_ACCOUNT_TOKEN` → self-hosted / unattended
  */
 export function resolveGrafanaMcpMode(): GrafanaMcpMode {
+  // Allow Agent Observability verify runs to skip Cloud MCP (needs interactive OAuth).
+  if (process.env.AGENTO11Y_SKIP_GRAFANA_MCP?.trim() === '1') {
+    return 'off';
+  }
   if (process.env.GRAFANA_MCP_URL?.trim()) {
     return 'self_hosted';
   }

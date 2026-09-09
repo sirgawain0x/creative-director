@@ -1,9 +1,29 @@
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {genreSkillRelPath, type GenreId} from './genre.js';
 
-const skillsRoot = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills');
+/**
+ * Resolve skills/ even when ADK loads the agent from a temp copy
+ * (import.meta.url then points outside the repo).
+ */
+function resolveSkillsRoot(): string {
+  const fromModule = join(
+    dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'skills',
+  );
+  if (existsSync(fromModule)) {
+    return fromModule;
+  }
+  const fromCwd = join(process.cwd(), 'skills');
+  if (existsSync(fromCwd)) {
+    return fromCwd;
+  }
+  return fromModule;
+}
+
+const skillsRoot = resolveSkillsRoot();
 
 /** Load a markdown skill pack relative to `skills/`. */
 export function loadSkill(relPath: string): string {
