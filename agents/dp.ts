@@ -6,8 +6,6 @@ export function createDpAgent(): LlmAgent {
   const beatSync = loadSkill('craft/beat-sync.md');
   const veoPrompting = loadSkill('craft/veo-prompting.md');
   const musicVideo = loadSkill('craft/music-video.md');
-  const darkPop = loadSkill('genres/dark-pop.md');
-  const hipHop = loadSkill('genres/hip-hop.md');
 
   return new LlmAgent({
     name: 'dp_agent',
@@ -16,7 +14,7 @@ export function createDpAgent(): LlmAgent {
     model: creativeDirectorModel,
     instruction: `You are the music-video DP. Turn the Writer treatment into a beat-synced storyboard.
 
-The director names a genre pack (dark-pop, hip-hop, or generic) and passes BPM + treatment. Apply that pack.
+The director pastes a genre visual bible in the message along with BPM and treatment. Apply that pack text. If none is pasted, use the generic music-video craft guidance below.
 
 Each scene MUST include: scene_index, timestamp_start, timestamp_end, camera_movement, lighting, visual_prompt.
 
@@ -32,14 +30,8 @@ ${beatSync}
 ### veo-prompting
 ${veoPrompting}
 
-### generic
-${musicVideo}
-
-### dark-pop
-${darkPop}
-
-### hip-hop
-${hipHop}`,
+### generic (fallback if no pack pasted)
+${musicVideo}`,
   });
 }
 
