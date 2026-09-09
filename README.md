@@ -67,6 +67,51 @@ npm run typecheck
 | **Planning** (default) | unset or `CREATIVE_DIRECTOR_MODE=planning` | Research + storyboard only |
 | **Production** | `CREATIVE_DIRECTOR_MODE=production` | Full tool loop; video/C2PA tools are **mocks** |
 
+## Grafana Cloud MCP (optional)
+
+Wire Grafana into the director for render-pipeline observability (hackathon partner track–compatible). Tools are prefixed `grafana_`.
+
+**Activate (local):**
+
+1. In Grafana Cloud (`https://thecreative.grafana.net`), accept **Grafana Assistant** terms (admin). Editor+ has MCP access by default.
+2. Ensure `.env` has `GRAFANA_URL=https://thecreative.grafana.net` (no `GRAFANA_MCP_URL` for Cloud OAuth).
+3. Run `npm run adk:web` — complete browser OAuth on first MCP connect (deny write if query-only).
+4. Ask the director to list datasources or query Loki; expect `grafana_*` tools.
+
+| Env | Purpose |
+|-----|---------|
+| `GRAFANA_URL` | Your stack, e.g. `https://thecreative.grafana.net` — uses hosted `https://mcp.grafana.com/mcp` (OAuth on first connect) |
+| `GRAFANA_MCP_URL` | Self-hosted / open-source Grafana MCP endpoint (preferred for unattended Agent Runtime) |
+| `GRAFANA_SERVICE_ACCOUNT_TOKEN` | Bearer token for self-hosted MCP |
+| `GRAFANA_CLOUD_MCP_URL` | Override hosted MCP URL (default `https://mcp.grafana.com/mcp`) |
+
+```bash
+# Confirm Cloud MCP env (no secrets printed)
+npm run grafana:verify
+
+# Local demo (browser OAuth once on first grafana_* tool use)
+npm run adk:web
+```
+
+Open http://localhost:8000/dev-ui/ — select **agent**, then ask to list Grafana datasources. Complete OAuth in the browser when prompted.
+
+### Agent Runtime Grafana
+
+1. Create a Grafana service account + token (`glsa_…`) with Viewer/Editor as needed.
+2. Run open-source Grafana MCP against `https://thecreative.grafana.net` (token auth).
+3. Update runtime env (requires deploy approval):
+
+```bash
+# Dry-run the update-env-vars command (token redacted in output):
+# export GRAFANA_MCP_URL='https://YOUR_MCP_HOST/mcp'
+# export GRAFANA_SERVICE_ACCOUNT_TOKEN='glsa_...'
+# ./scripts/grafana-runtime-env.example.sh
+
+agents-cli deploy --update-env-vars "GRAFANA_MCP_URL=https://YOUR_MCP_HOST/mcp,GRAFANA_SERVICE_ACCOUNT_TOKEN=glsa_..."
+```
+
+`GRAFANA_MCP_URL` takes precedence over `GRAFANA_URL` in [`lib/grafana-mcp.ts`](lib/grafana-mcp.ts).
+
 ## Run locally
 
 ```bash
@@ -162,7 +207,18 @@ After deploy, query the remote agent from the Cloud console or the Agent Engine 
 
 ## Observability
 
-Agent traces are enabled via OpenTelemetry. The deployed container sets:
+Agent traces use **standard OpenTelemetry OTLP exporters** (not the deprecated
+`@google-cloud/opentelemetry-cloud-*-exporter` packages).
+
+**Local / Grafana:** set `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_EXPORTER_OTLP_HEADERS`
+(and Agent Observability `AGENTO11Y_*` vars). ADK enables OTLP automatically when those
+env vars are present — scripts no longer pass `--otel_to_cloud`.
+
+**Optional Cloud Trace via OTLP:** set `GOOGLE_CLOUD_OTLP_TELEMETRY=1` to also export
+to `https://telemetry.googleapis.com` with Application Default Credentials (see
+[Google’s OTLP migration guide](https://github.com/GoogleCloudPlatform/opentelemetry-operations-js/blob/main/MIGRATION.md)).
+
+The deployed container sets:
 
 | Variable | Value |
 |----------|-------|
@@ -170,14 +226,45 @@ Agent traces are enabled via OpenTelemetry. The deployed container sets:
 | `OTEL_SEMCONV_STABILITY_OPT_IN` | `gen_ai_latest_experimental` |
 | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | `EVENT_ONLY` |
 
-Local dev scripts (`adk:run`, `adk:web`, `adk:api`) pass `--otel_to_cloud`. Copy the telemetry vars from [`.env.example`](.env.example) into your `.env` for full parity.
+Copy the telemetry vars from [`.env.example`](.env.example) into your `.env` for full parity.
 
 **View traces (deployed agent):**
 
 1. [Agent Platform Deployments](https://console.cloud.google.com/vertex-ai/agents/agent-engines) → select your instance → **Traces** tab (Session view or Span view).
 2. Fallback: [Cloud Console → Trace → Trace explorer](https://console.cloud.google.com/traces).
+3. Local Grafana Agent Observability: your stack’s Agent Observability app + Tempo.
 
 Prompt and response content appears in **Cloud Logging** events (`EVENT_ONLY`), not in trace span attributes. Ensure you have end-user consent and data handling policies in place before collecting this data in production.
+
+## Genre catalog
+
+Briefs resolve through a hybrid catalog: deep markdown packs, family templates, or a generic craft fallback (`select_genre_pack` / `resolveGenrePack`).
+
+Data lives in [`data/genres/catalog.json`](data/genres/catalog.json) and [`data/genres/families.json`](data/genres/families.json). Deep packs live under [`skills/genres/`](skills/genres/).
+
+### Extend the catalog
+
+1. **Add aliases** — edit `data/genres/catalog.json`. Add strings to `appleAliases` and/or `spotifyAliases` on an existing entry (or add a new entry with `id`, `label`, aliases, and `family`). Matching uses `normalizeGenreKey` (`&` → `and`, hyphens/underscores → spaces).
+2. **Template-only genres** — set `family` to one of: `urban`, `electronic`, `pop`, `rock`, `acoustic`, `global`, `metal`, `dance`, `jazz-soul`, `experimental`. Omit `deepPack` so resolution expands that family template at runtime.
+3. **Promote to deep** — add `skills/genres/<id>.md` with these four headers, then set `"deepPack": "<id>"` on the catalog entry:
+
+```markdown
+# [Genre Label] Visual Bible
+
+## Visual Palette
+...
+
+## Core Motifs
+...
+
+## Camera & Pacing
+...
+
+## Narrative & Stylistic Directives
+...
+```
+
+Catalog updates are PR-based JSON/markdown edits (no live Spotify/Apple sync in v1).
 
 ## Clean up
 

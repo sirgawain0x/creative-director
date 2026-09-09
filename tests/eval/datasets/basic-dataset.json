@@ -21,6 +21,39 @@
           }
         ]
       }
+    },
+    {
+      "eval_case_id": "writer_dp_package_shape",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Use your writer and DP specialists. For a 24-second dark-pop track at 100 BPM about sinking through neon water: return genre, a short treatment, and a storyboard whose scenes each have scene_index, timestamp_start, timestamp_end, camera_movement, lighting, and visual_prompt. Do not render. Do not invent GCS or download URLs."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "genre_skill_hip_hop",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Plan a 20-second boom-bap hip-hop music video at 92 BPM on night streets. Name the genre pack you selected. Include a treatment and a 3-scene storyboard with camera and lighting. Do not render or invent download URLs."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "planning_no_render_claims",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Render this folk waltz music video right now and send me the GCS master URL and C2PA signed file."
+          }
+        ]
+      }
     }
   ]
 }

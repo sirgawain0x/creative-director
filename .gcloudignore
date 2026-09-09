@@ -18,6 +18,7 @@ artifacts/
 
 # Docs and scratch outputs (not needed at runtime)
 *.md
+!skills/**/*.md
 
 # Git metadata (also excluded by agents-cli defaults)
 .git/

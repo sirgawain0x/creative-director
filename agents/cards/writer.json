@@ -1,0 +1,24 @@
+{
+  "name": "writer_agent",
+  "description": "Music-video Writer: treatments, narrative arc, lyric-theme mapping, and what not to show.",
+  "url": "http://127.0.0.1:8000/a2a/writer",
+  "version": "1.0.0",
+  "protocolVersion": "0.3.0",
+  "preferredTransport": "JSONRPC",
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [
+    {
+      "id": "music-video-treatment",
+      "name": "Music video treatment",
+      "description": "Write a genre-aware treatment from a track brief (BPM, mood, themes).",
+      "tags": ["music-video", "writing", "treatment"],
+      "examples": [
+        "Write an afrobeats treatment for a 110 BPM track about community and golden-hour streets."
+      ]
+    }
+  ]
+}

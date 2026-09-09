@@ -1,0 +1,24 @@
+{
+  "name": "dp_agent",
+  "description": "Music-video DP: beat-synced shot list, camera, lighting, and Veo-ready visual prompts.",
+  "url": "http://127.0.0.1:8000/a2a/dp",
+  "version": "1.0.0",
+  "protocolVersion": "0.3.0",
+  "preferredTransport": "JSONRPC",
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [
+    {
+      "id": "beat-synced-storyboard",
+      "name": "Beat-synced storyboard",
+      "description": "Turn a treatment into timecoded scenes with camera, lighting, and visual_prompt.",
+      "tags": ["music-video", "cinematography", "storyboard"],
+      "examples": [
+        "Storyboard 4 scenes at 100 BPM from this hip-hop treatment."
+      ]
+    }
+  ]
+}

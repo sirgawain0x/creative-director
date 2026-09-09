@@ -1,0 +1,62 @@
+{
+  "urban": {
+    "palette": "Night exteriors, sodium streetlight, brick, amber vs ice-blue contrast.",
+    "motifs": "Strut, cypher, rooftop, low-angle hero presence.",
+    "camera": "Handheld tracking, crash zooms on accents, motivated practicals.",
+    "writer": "Boast, confession, or come-up in images; no fake brand merch."
+  },
+  "electronic": {
+    "palette": "Deep navy/black, neon practicals, volumetric shafts, single warm accent.",
+    "motifs": "Suspension, freefall on drops, hollow interior space, frozen time.",
+    "camera": "Crane descents, orbits, whip-zooms on hits.",
+    "writer": "Singular protagonist, emotional gravity over plot dump."
+  },
+  "pop": {
+    "palette": "Clean high-key or glossy night; one signature wardrobe color.",
+    "motifs": "Hooks as visual refrains; mirror/phone/stage motifs sparingly.",
+    "camera": "Steadicam verses, wider chorus geography, crisp cuts on downbeats.",
+    "writer": "Clear emotional want; keep generative-video-friendly faces/bodies."
+  },
+  "rock": {
+    "palette": "Stage tungsten, smoke, daylight grit, denim/leather textures.",
+    "motifs": "Live energy, road, rehearsal rooms, crowd surge on chorus.",
+    "camera": "Handheld pit energy, slow push on bridges.",
+    "writer": "Conflict and release; avoid copyrighted lyric quotes."
+  },
+  "acoustic": {
+    "palette": "Warm daylight, wood, linen, soft window light.",
+    "motifs": "Hands, instruments, intimate rooms, landscape breathers.",
+    "camera": "Locked-off intimacy, gentle dollies, natural light priority.",
+    "writer": "Quiet stakes, memory, place-as-character."
+  },
+  "global": {
+    "palette": "Saturated local color, golden hour, market/street practicals.",
+    "motifs": "Community, dance circles, procession, city-to-landscape contrast.",
+    "camera": "Wide establishing + close rhythm cuts on percussion.",
+    "writer": "Culture-specific motifs without costume cliché; respect locality."
+  },
+  "metal": {
+    "palette": "High contrast B/W or desaturated cold steel; strobe accents.",
+    "motifs": "Crush, ritual, void, industrial spaces.",
+    "camera": "Aggressive push-ins, whip pans on blasts.",
+    "writer": "Power and catharsis; keep practical, not cartoon CGI."
+  },
+  "dance": {
+    "palette": "Club RGB, lasers, wet floors, dawn-after exteriors.",
+    "motifs": "Bodies in sync, DJ booth glimpses, euphoria vs comedown.",
+    "camera": "Sweeping cranes, rhythmic jump cuts on kicks.",
+    "writer": "Physical joy and release; faceless-enough for generative video."
+  },
+  "jazz-soul": {
+    "palette": "Warm tungsten, brass highlights, velvet shadow.",
+    "motifs": "Club booths, late-night streets, intimate duets.",
+    "camera": "Slow orbits, smoke shafts, soft rack focus.",
+    "writer": "Mood-first narrative; restraint over spectacle."
+  },
+  "experimental": {
+    "palette": "Unnatural grades, film damage, sparse practicals.",
+    "motifs": "Abstract body, glitch, surreal object logic.",
+    "camera": "Jump cuts, locked surreal frames, unexpected angles.",
+    "writer": "Image-led meaning; avoid explaining the metaphor."
+  }
+}

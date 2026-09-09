@@ -18,6 +18,8 @@ WORKDIR /app
 
 ENV GOOGLE_GENAI_USE_VERTEXAI=1
 ENV GOOGLE_CLOUD_LOCATION=global
+# So ADK temp-bundle createRequire can resolve optional peers (MCP SDK).
+ENV NODE_PATH=/app/node_modules
 
 # Agent Runtime telemetry (Cloud Trace + EVENT_ONLY prompt/response in logs)
 ENV GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true
@@ -27,6 +29,8 @@ ENV OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY
 COPY package.json package-lock.json agent.ts tsconfig.json ./
 COPY lib ./lib
 COPY tools ./tools
+COPY agents ./agents
+COPY skills ./skills
 
 RUN npm ci --omit=dev
 
@@ -37,4 +41,4 @@ USER myuser
 
 EXPOSE 8080
 
-CMD ["npx", "adk", "api_server", "agent.ts", "--port", "8080", "--host", "0.0.0.0", "--otel_to_cloud"]
+CMD ["npx", "adk", "api_server", "agent.ts", "--port", "8080", "--host", "0.0.0.0"]

@@ -1,0 +1,272 @@
+[
+  {
+    "id": "dark-pop",
+    "label": "Dark Pop",
+    "appleAliases": ["Dark Pop", "Synthwave", "Darkwave", "Dark Synth"],
+    "spotifyAliases": ["dark-pop", "synthwave", "darkwave", "dark synth"],
+    "family": "electronic",
+    "deepPack": "dark-pop"
+  },
+  {
+    "id": "hip-hop",
+    "label": "Hip-Hop",
+    "appleAliases": ["Hip-Hop", "Hip Hop", "Rap", "Trap", "Boom Bap"],
+    "spotifyAliases": ["hip-hop", "hip hop", "rap", "trap", "boom-bap"],
+    "family": "urban",
+    "deepPack": "hip-hop"
+  },
+  {
+    "id": "pop",
+    "label": "Pop",
+    "appleAliases": ["Pop", "Pop Music"],
+    "spotifyAliases": ["pop", "pop music"],
+    "family": "pop",
+    "deepPack": "pop"
+  },
+  {
+    "id": "r-and-b",
+    "label": "R&B",
+    "appleAliases": ["R&B", "R&B/Soul", "R and B"],
+    "spotifyAliases": ["r&b", "r-n-b", "r-and-b", "r and b"],
+    "family": "jazz-soul",
+    "deepPack": "r-and-b"
+  },
+  {
+    "id": "soul",
+    "label": "Soul",
+    "appleAliases": ["Soul", "Neo-Soul"],
+    "spotifyAliases": ["soul", "neo-soul", "neo soul"],
+    "family": "jazz-soul",
+    "deepPack": "soul"
+  },
+  {
+    "id": "afrobeats",
+    "label": "Afrobeats",
+    "appleAliases": ["Afrobeats", "Afro-Beats"],
+    "spotifyAliases": ["afrobeats", "afro beats"],
+    "family": "global",
+    "deepPack": "afrobeats"
+  },
+  {
+    "id": "amapiano",
+    "label": "Amapiano",
+    "appleAliases": ["Amapiano"],
+    "spotifyAliases": ["amapiano"],
+    "family": "global",
+    "deepPack": "amapiano"
+  },
+  {
+    "id": "latin",
+    "label": "Latin",
+    "appleAliases": ["Latin", "Latin Pop"],
+    "spotifyAliases": ["latin", "latin pop"],
+    "family": "global",
+    "deepPack": "latin"
+  },
+  {
+    "id": "reggaeton",
+    "label": "Reggaeton",
+    "appleAliases": ["Reggaeton"],
+    "spotifyAliases": ["reggaeton"],
+    "family": "global",
+    "deepPack": "reggaeton"
+  },
+  {
+    "id": "k-pop",
+    "label": "K-Pop",
+    "appleAliases": ["K-Pop", "K Pop", "Kpop"],
+    "spotifyAliases": ["k-pop", "kpop", "k pop"],
+    "family": "pop",
+    "deepPack": "k-pop"
+  },
+  {
+    "id": "country",
+    "label": "Country",
+    "appleAliases": ["Country", "Country Music"],
+    "spotifyAliases": ["country", "country music"],
+    "family": "acoustic",
+    "deepPack": "country"
+  },
+  {
+    "id": "rock",
+    "label": "Rock",
+    "appleAliases": ["Rock", "Rock Music"],
+    "spotifyAliases": ["rock", "rock music"],
+    "family": "rock",
+    "deepPack": "rock"
+  },
+  {
+    "id": "indie",
+    "label": "Indie",
+    "appleAliases": ["Indie", "Indie Rock", "Alternative Rock"],
+    "spotifyAliases": ["indie", "indie rock", "alternative rock"],
+    "family": "rock",
+    "deepPack": "indie"
+  },
+  {
+    "id": "metal",
+    "label": "Metal",
+    "appleAliases": ["Metal", "Heavy Metal"],
+    "spotifyAliases": ["metal", "heavy metal"],
+    "family": "metal",
+    "deepPack": "metal"
+  },
+  {
+    "id": "punk",
+    "label": "Punk",
+    "appleAliases": ["Punk", "Punk Rock"],
+    "spotifyAliases": ["punk", "punk rock"],
+    "family": "rock",
+    "deepPack": "punk"
+  },
+  {
+    "id": "edm",
+    "label": "EDM",
+    "appleAliases": ["EDM", "Electronic Dance Music"],
+    "spotifyAliases": ["edm", "electronic dance music"],
+    "family": "dance",
+    "deepPack": "edm"
+  },
+  {
+    "id": "house",
+    "label": "House",
+    "appleAliases": ["House", "House Music"],
+    "spotifyAliases": ["house", "house music"],
+    "family": "dance",
+    "deepPack": "house"
+  },
+  {
+    "id": "techno",
+    "label": "Techno",
+    "appleAliases": ["Techno"],
+    "spotifyAliases": ["techno"],
+    "family": "dance",
+    "deepPack": "techno"
+  },
+  {
+    "id": "drill",
+    "label": "Drill",
+    "appleAliases": ["Drill", "UK Drill"],
+    "spotifyAliases": ["drill", "uk drill"],
+    "family": "urban",
+    "deepPack": "drill"
+  },
+  {
+    "id": "grime",
+    "label": "Grime",
+    "appleAliases": ["Grime"],
+    "spotifyAliases": ["grime"],
+    "family": "urban",
+    "deepPack": "grime"
+  },
+  {
+    "id": "jazz",
+    "label": "Jazz",
+    "appleAliases": ["Jazz"],
+    "spotifyAliases": ["jazz"],
+    "family": "jazz-soul",
+    "deepPack": "jazz"
+  },
+  {
+    "id": "blues",
+    "label": "Blues",
+    "appleAliases": ["Blues"],
+    "spotifyAliases": ["blues"],
+    "family": "jazz-soul",
+    "deepPack": "blues"
+  },
+  {
+    "id": "folk",
+    "label": "Folk",
+    "appleAliases": ["Folk", "Folk Music"],
+    "spotifyAliases": ["folk", "folk music"],
+    "family": "acoustic",
+    "deepPack": "folk"
+  },
+  {
+    "id": "gospel",
+    "label": "Gospel",
+    "appleAliases": ["Gospel"],
+    "spotifyAliases": ["gospel"],
+    "family": "acoustic",
+    "deepPack": "gospel"
+  },
+  {
+    "id": "classical-cinematic",
+    "label": "Classical Cinematic",
+    "appleAliases": ["Classical", "Classical Cinematic", "Film Score", "Orchestral Score"],
+    "spotifyAliases": ["classical", "classical cinematic", "film score", "orchestral score"],
+    "family": "experimental",
+    "deepPack": "classical-cinematic"
+  },
+  {
+    "id": "shoegaze",
+    "label": "Shoegaze",
+    "appleAliases": ["Shoegaze"],
+    "spotifyAliases": ["shoegaze"],
+    "family": "experimental"
+  },
+  {
+    "id": "bossa-nova",
+    "label": "Bossa Nova",
+    "appleAliases": ["Bossa Nova"],
+    "spotifyAliases": ["bossa nova", "bossa-nova"],
+    "family": "jazz-soul"
+  },
+  {
+    "id": "hardstyle",
+    "label": "Hardstyle",
+    "appleAliases": ["Hardstyle"],
+    "spotifyAliases": ["hardstyle"],
+    "family": "dance"
+  },
+  {
+    "id": "bluegrass",
+    "label": "Bluegrass",
+    "appleAliases": ["Bluegrass"],
+    "spotifyAliases": ["bluegrass"],
+    "family": "acoustic"
+  },
+  {
+    "id": "afro-house",
+    "label": "Afro House",
+    "appleAliases": ["Afro House"],
+    "spotifyAliases": ["afro house", "afro-house"],
+    "family": "global"
+  },
+  {
+    "id": "future-bass",
+    "label": "Future Bass",
+    "appleAliases": ["Future Bass"],
+    "spotifyAliases": ["future bass", "future-bass"],
+    "family": "electronic"
+  },
+  {
+    "id": "teen-pop",
+    "label": "Teen Pop",
+    "appleAliases": ["Teen Pop"],
+    "spotifyAliases": ["teen pop", "teen-pop"],
+    "family": "pop"
+  },
+  {
+    "id": "death-metal",
+    "label": "Death Metal",
+    "appleAliases": ["Death Metal"],
+    "spotifyAliases": ["death metal", "death-metal"],
+    "family": "metal"
+  },
+  {
+    "id": "gangsta-rap",
+    "label": "Gangsta Rap",
+    "appleAliases": ["Gangsta Rap"],
+    "spotifyAliases": ["gangsta rap", "gangsta-rap"],
+    "family": "urban"
+  },
+  {
+    "id": "arena-rock",
+    "label": "Arena Rock",
+    "appleAliases": ["Arena Rock"],
+    "spotifyAliases": ["arena rock", "arena-rock"],
+    "family": "rock"
+  }
+]
