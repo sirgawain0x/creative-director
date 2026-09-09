@@ -32,6 +32,9 @@ const envPath = join(repoRoot, '.env');
 
 /** Load `.env` from the repo root with override so Cloud endpoints win. */
 export function loadAgento11yEnv(): void {
+  if (process.env.VITEST) {
+    return;
+  }
   if (existsSync(envPath)) {
     loadDotenv({path: envPath, override: true});
   }

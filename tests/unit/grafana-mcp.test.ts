@@ -1,4 +1,4 @@
-import {afterEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {MCPToolset} from '@google/adk';
 import {
   GRAFANA_CLOUD_MCP_URL,
@@ -23,6 +23,10 @@ describe('normalizeGrafanaStackUrl', () => {
 });
 
 describe('resolveGrafanaMcpMode', () => {
+  beforeEach(() => {
+    vi.stubEnv('AGENTO11Y_SKIP_GRAFANA_MCP', '');
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -48,9 +52,21 @@ describe('resolveGrafanaMcpMode', () => {
     expect(resolveGrafanaMcpMode()).toBe('self_hosted');
     expect(resolveGrafanaMcpEndpoint()).toBe('http://127.0.0.1:8000/mcp');
   });
+
+  it('is off when AGENTO11Y_SKIP_GRAFANA_MCP=1 even with GRAFANA_URL', () => {
+    vi.stubEnv('AGENTO11Y_SKIP_GRAFANA_MCP', '1');
+    vi.stubEnv('GRAFANA_URL', 'https://mystack.grafana.net');
+    vi.stubEnv('GRAFANA_MCP_URL', '');
+    expect(resolveGrafanaMcpMode()).toBe('off');
+    expect(isGrafanaMcpConfigured()).toBe(false);
+  });
 });
 
 describe('buildGrafanaMcpHeaders', () => {
+  beforeEach(() => {
+    vi.stubEnv('AGENTO11Y_SKIP_GRAFANA_MCP', '');
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -82,6 +98,10 @@ describe('GRAFANA_PIPELINE_TOOL_FILTER', () => {
 });
 
 describe('createGrafanaMcpToolset', () => {
+  beforeEach(() => {
+    vi.stubEnv('AGENTO11Y_SKIP_GRAFANA_MCP', '');
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
   });
