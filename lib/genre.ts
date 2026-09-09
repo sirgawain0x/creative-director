@@ -1,3 +1,25 @@
+export type GenrePackSource = 'deep' | 'template' | 'generic';
+
+export interface GenrePackResolution {
+  catalogGenre: string;
+  packId: string;
+  source: GenrePackSource;
+  pack: string;
+  aliasesMatched?: string[];
+  warning?: string;
+}
+
+export function normalizeGenreKey(input: string): string {
+  return input
+    .normalize('NFKC')
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, ' and ')
+    .replace(/[_\s]+/g, ' ')
+    .replace(/[-\s]+/g, ' ')
+    .trim();
+}
+
 export const GENRE_IDS = ['dark-pop', 'hip-hop', 'generic'] as const;
 
 export type GenreId = (typeof GENRE_IDS)[number];

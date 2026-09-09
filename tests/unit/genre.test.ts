@@ -1,5 +1,23 @@
 import {describe, expect, it} from 'vitest';
-import {genreSkillRelPath, resolveGenre} from '../../lib/genre.js';
+import {
+  genreSkillRelPath,
+  normalizeGenreKey,
+  resolveGenre,
+} from '../../lib/genre.js';
+
+describe('normalizeGenreKey', () => {
+  it('collapses r&b variants', () => {
+    const keys = ['R&B', 'r-and-b', 'r and b', 'R And B', 'r_and_b'].map(
+      normalizeGenreKey,
+    );
+    expect(new Set(keys).size).toBe(1);
+    expect(keys[0]).toBe('r and b');
+  });
+
+  it('trims and lowercases', () => {
+    expect(normalizeGenreKey('  Hip-Hop  ')).toBe('hip hop');
+  });
+});
 
 describe('resolveGenre', () => {
   it('selects dark-pop for synthwave / dark-pop briefs', () => {
