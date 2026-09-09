@@ -1,0 +1,24 @@
+{
+  "name": "editor_agent",
+  "description": "Music-video Editor: clip order, BPM cuts, and assemble_and_sync_timeline arguments.",
+  "url": "http://127.0.0.1:8000/a2a/editor",
+  "version": "1.0.0",
+  "protocolVersion": "0.3.0",
+  "preferredTransport": "JSONRPC",
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [
+    {
+      "id": "assembly-plan",
+      "name": "Assembly plan",
+      "description": "Order clip_urls, set target_bpm, and specify assemble_and_sync_timeline arguments without inventing URLs.",
+      "tags": ["music-video", "editing", "assembly"],
+      "examples": [
+        "Given these clip_urls and 120 BPM, return assemble_and_sync_timeline arguments."
+      ]
+    }
+  ]
+}

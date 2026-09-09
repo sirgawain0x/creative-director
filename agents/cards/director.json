@@ -1,0 +1,24 @@
+{
+  "name": "Creative_Director_AI",
+  "description": "Music-video Creative Director: coordinates Writer, DP, and Editor, then Veo + Pixels + C2PA tools.",
+  "url": "http://127.0.0.1:8000/a2a/director",
+  "version": "1.0.0",
+  "protocolVersion": "0.3.0",
+  "preferredTransport": "JSONRPC",
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [
+    {
+      "id": "orchestrate-music-video",
+      "name": "Orchestrate music video",
+      "description": "Route a creator brief through genre selection, Writer, DP, optional HITL, then render tools.",
+      "tags": ["music-video", "orchestration", "director"],
+      "examples": [
+        "Plan a 30-second dark synthwave music video at 120 BPM. Do not render."
+      ]
+    }
+  ]
+}
