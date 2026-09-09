@@ -170,9 +170,9 @@ describe('resolveGenre', () => {
     expect(resolveGenre('asdfqwer zxcv music brief')).toBe('generic');
   });
 
-  it('maps non-GenreId deep and template hits to generic until select_genre_pack rewires', () => {
+  it('maps non-GenreId deep and template hits to generic for GenreId callers', () => {
     expect(resolveGenre('shoegaze dream video')).toBe('generic');
-    // folk is deep in resolveGenrePack, but not a GenreId yet → generic
+    // folk is deep in resolveGenrePack, but not a GenreId → generic
     expect(resolveGenre('a folk waltz in a sunlit kitchen')).toBe('generic');
 
     const shoegaze = resolveGenrePack('shoegaze dream video');

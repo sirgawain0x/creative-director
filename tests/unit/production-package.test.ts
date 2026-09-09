@@ -30,4 +30,22 @@ describe('productionPackageSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('accepts catalog genre ids beyond the old enum', () => {
+    const parsed = productionPackageSchema.parse({
+      genre: 'afrobeats',
+      treatment: 'x',
+      storyboard: [
+        {
+          scene_index: 1,
+          timestamp_start: '0:00',
+          timestamp_end: '0:08',
+          camera_movement: 'push',
+          lighting: 'neon',
+          visual_prompt: 'wide night street',
+        },
+      ],
+    });
+    expect(parsed.genre).toBe('afrobeats');
+  });
 });

@@ -10,14 +10,15 @@ import {searchSpecialist, urlSpecialist} from './agents/research.js';
 import {specialistAgentTool} from './agents/specialist-tool.js';
 import {writerAgent} from './agents/writer.js';
 import {
-  AGENTO11Y_AGENT_NAME,
   createAgento11yBootstrap,
+  setupGcpOtlpProvidersOnly,
 } from './lib/agento11y.js';
+import {isGcpOtlpTelemetryEnabled} from './lib/otel-gcp-otlp.js';
 import {
   createGrafanaMcpToolset,
   isGrafanaMcpConfigured,
 } from './lib/grafana-mcp.js';
-import {resolveGenre} from './lib/genre.js';
+import {resolveGenrePack} from './lib/genre.js';
 import {creativeDirectorModel} from './lib/model.js';
 import {
   isC2paEmbedConfigured,
@@ -25,7 +26,6 @@ import {
   isProductionRenderConfigured,
   isProvenanceConfigured,
 } from './lib/render-config.js';
-import {loadGenrePack} from './lib/skills.js';
 import {assembleAndSyncTimeline} from './tools/assemble-timeline.js';
 import {generateVideoCut} from './tools/generate-video-cut.js';
 import {signC2paManifest} from './tools/sign-c2pa-manifest.js';
@@ -53,19 +53,13 @@ const grafanaTools = grafanaMcpToolset ? [grafanaMcpToolset] : [];
 const selectGenrePackTool = new FunctionTool({
   name: 'select_genre_pack',
   description:
-    'Select the music-video genre skill pack (dark-pop, hip-hop, or generic fallback) from the user brief. Call this before writer_agent or dp_agent.',
+    'Resolve a hybrid catalog genre pack from the user brief: deep skill packs when available, otherwise style-family templates, with generic fallback and optional warning. Call before writer_agent or dp_agent; pass pack text verbatim into those tools.',
   parameters: z.object({
     brief: z
       .string()
       .describe('User brief including genre, mood, and musical style'),
   }),
-  execute: async ({brief}) => {
-    const genre = resolveGenre(brief);
-    return {
-      genre,
-      pack: loadGenrePack(genre),
-    };
-  },
+  execute: async ({brief}) => resolveGenrePack(brief),
 });
 
 const writerTool = specialistAgentTool(
@@ -316,15 +310,20 @@ ${MOCK_PIPELINE_RULES}`)}`,
 export const rootAgent =
   agentMode === 'production' ? productionAgent : planningAgent;
 
-const agento11yBootstrap = createAgento11yBootstrap();
+const agento11yBootstrap = await createAgento11yBootstrap();
+if (!agento11yBootstrap && isGcpOtlpTelemetryEnabled()) {
+  await setupGcpOtlpProvidersOnly();
+}
 const agento11yPlugins = agento11yBootstrap ? [agento11yBootstrap.plugin] : [];
 
 /**
  * Preferred entry for ADK Dev UI / Runner — carries Agent Observability plugins
  * when AGENTO11Y_* + OTEL_* env are set.
+ * Name must be `agent` (matches `agent.ts` / Dev UI routes) so session create
+ * and Runner lookup use the same appName. Grafana identity is set on the plugin.
  */
 export const app = new App({
-  name: AGENTO11Y_AGENT_NAME,
+  name: 'agent',
   rootAgent,
   plugins: agento11yPlugins,
 });

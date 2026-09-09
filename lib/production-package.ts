@@ -1,5 +1,4 @@
 import {z} from 'zod';
-import {GENRE_IDS} from './genre.js';
 
 export const storyboardSceneSchema = z.object({
   scene_index: z.number().int().positive(),
@@ -11,7 +10,7 @@ export const storyboardSceneSchema = z.object({
 });
 
 export const productionPackageSchema = z.object({
-  genre: z.enum(GENRE_IDS),
+  genre: z.string().min(1),
   treatment: z.string().min(1),
   storyboard: z.array(storyboardSceneSchema).min(1),
   clip_urls: z.array(z.string()).optional(),

@@ -230,8 +230,8 @@ export function resolveGenrePack(brief: string): GenrePackResolution {
 
 /**
  * Transition helper for callers still typed to GenreId (e.g. loadGenrePack).
- * Only deep dark-pop / hip-hop pass through; template/family/generic → 'generic'
- * until select_genre_pack is rewired to resolveGenrePack (Task 5).
+ * Only deep dark-pop / hip-hop pass through; template/family/generic → 'generic'.
+ * Prefer resolveGenrePack for new call sites (select_genre_pack already uses it).
  */
 export function resolveGenre(brief: string): GenreId {
   const {source, packId} = resolveGenrePack(brief);
