@@ -183,6 +183,8 @@ agents-cli eval analyze --results artifacts/grade_results/results_<timestamp>.js
 
 ## Deploy to Agent Runtime
 
+**Pixels / production wiring:** see [DEPLOY-PLAYBOOK.md](./DEPLOY-PLAYBOOK.md) for architecture (Pixels → Vercel `api/director` → Vertex Engine), ship checklist, smoke tests, and risks. Do not confuse Agent Engine deploy with Pixels headless Cloud Run.
+
 Deploy with `agents-cli` (Agent Runtime / Agent Engine):
 
 1. Provision infrastructure (service account, IAM, telemetry bucket — first time only):
