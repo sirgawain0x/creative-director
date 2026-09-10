@@ -30,6 +30,7 @@ COPY package.json package-lock.json agent.ts tsconfig.json ./
 COPY lib ./lib
 COPY tools ./tools
 COPY agents ./agents
+COPY data ./data
 COPY skills ./skills
 
 RUN npm ci --omit=dev
