@@ -100,30 +100,33 @@ If production still runs a build **before** these merges, Pixels users will not 
 
 ---
 
-## Pre-deploy blockers (fix before ship)
+## Pre-deploy checklist (genre data in image)
 
-### 1. Dockerfile missing `data/genres/`
+`lib/genre.ts` reads `data/genres/catalog.json` and `families.json` at runtime. The `Dockerfile` includes `COPY data ./data` (only `data/genres/` exists today).
 
-`lib/genre.ts` reads `data/genres/catalog.json` and `families.json` at runtime. The current `Dockerfile` copies `skills/` but **not** `data/`. Without a fix, deployed `select_genre_pack` will fall back or error.
-
-**Action:** Add to `Dockerfile` before ship:
-
-```dockerfile
-COPY data ./data
-```
-
-Verify locally: `docker build -t cd-test . && docker run --rm cd-test ls -la data/genres/`
-
-### 2. `PIXELS_HEADLESS_API_KEY` not in `npm run deploy`
-
-`package.json` deploy script sets `PIXELS_HEADLESS_URL` but not the bearer token. Production assembly calls headless with `Authorization: Bearer …` when the key is set.
-
-**Action:** If headless requires auth, add to deploy (do not commit the secret):
+Verify locally after Dockerfile changes:
 
 ```bash
-agents-cli deploy --project creative-ai-491118 --region us-east1 \
-  --update-env-vars "...,PIXELS_HEADLESS_API_KEY=<from Cloud Run PIXELS_API_KEY>"
+docker build -t cd-test . && docker run --rm cd-test ls -la data/genres/
 ```
+
+### 2. `PIXELS_HEADLESS_API_KEY` — Vercel vs Agent Engine (separate)
+
+| Where | Var name | Who reads it |
+|-------|----------|--------------|
+| **Vercel** (Pixels prod) | `PIXELS_HEADLESS_API_KEY` | Pixels app / `api/*` if needed |
+| **Agent Engine** (this deploy) | `PIXELS_HEADLESS_API_KEY` | Agent runtime — `lib/pixels-headless-client.ts` sends `Authorization: Bearer …` on `assemble_and_sync_timeline` |
+
+Vercel already having the key does **not** inject it into the Reasoning Engine. The agent must have `PIXELS_HEADLESS_API_KEY` as a **runtime env var on engine `7129954674127405056`**.
+
+`npm run deploy` (`scripts/deploy.sh`) passes the key only when exported in the deployer's shell:
+
+```bash
+export PIXELS_HEADLESS_API_KEY='<same value as Cloud Run PIXELS_API_KEY>'
+npm run deploy
+```
+
+If omitted, deploy continues without updating that var (existing engine value is left as-is). Verify in Console → Agent Engines → **creative-director-ai** → Environment variables.
 
 ### 3. Optional Grafana runtime env
 
@@ -137,7 +140,7 @@ Hosted Grafana MCP needs self-hosted MCP + token on Agent Runtime (see `scripts/
 
 - [ ] On `main` with intended release commit (synced Origin clone).
 - [ ] **Human approval** to deploy (per `AGENTS.md`).
-- [ ] Fix Dockerfile `data/` copy if not already merged.
+- [ ] Dockerfile includes `COPY data ./data` (genre catalog).
 - [ ] `npm install`
 - [ ] `npm run typecheck`
 - [ ] `npm run test:unit`
@@ -150,19 +153,12 @@ Hosted Grafana MCP needs self-hosted MCP + token on Agent Runtime (see `scripts/
 
 ```bash
 cd creative-director
+# Optional but recommended if setting/updating headless auth on the engine:
+export PIXELS_HEADLESS_API_KEY='<same value as Cloud Run PIXELS_API_KEY>'
 npm run deploy
 ```
 
-Equivalent explicit command:
-
-```bash
-agents-cli deploy \
-  --project creative-ai-491118 \
-  --region us-east1 \
-  --update-env-vars "CREATIVE_DIRECTOR_MODE=production,RENDERS_GCS_BUCKET=creative-ai-491118-creative-pixels-renders,VERTEX_LOCATION=us-central1,PIXELS_HEADLESS_URL=https://pixels-headless-3ortoh2aiq-uc.a.run.app"
-```
-
-Add secrets via extra `--update-env-vars` keys as needed (`PIXELS_HEADLESS_API_KEY`, `GRAFANA_MCP_URL`, etc.).
+`scripts/deploy.sh` wraps `agents-cli deploy` with production env vars. Add `GRAFANA_MCP_URL` / tokens via a one-off `agents-cli deploy --update-env-vars` if needed.
 
 **Wait** for deploy to finish (image build + Agent Engine update). Check Console → Agent Engines → **creative-director-ai** → deployment status.
 
@@ -248,7 +244,7 @@ Add secrets via extra `--update-env-vars` keys as needed (`PIXELS_HEADLESS_API_K
 | **Session IDs** | Pixels Firestore sessions ≠ Agent Engine session IDs unless explicitly correlated. Redeploy **in-place** preserves engine resource; existing AE sessions may reset on new revision — treat as soft break for in-flight chats. |
 | **Staging vs prod engines** | Today one prod engine ID. For staging, provision a **second** Reasoning Engine (separate Terraform apply or Console) and point a Vercel preview env at it. |
 | **Region confusion** | Agent Engine: `us-east1`. Gemini model: `global`. Veo: `us-central1`. Do not set `GOOGLE_CLOUD_LOCATION=us-east1` for the model. |
-| **Missing `data/` in image** | Genre catalog broken in prod until Dockerfile fixed. |
+| **Missing `data/` in image** | Genre catalog broken in prod — `Dockerfile` must include `COPY data ./data`. |
 | **Headless auth** | Missing `PIXELS_HEADLESS_API_KEY` → assembly tools fail at runtime. |
 | **Terraform drift** | Do not `terraform apply` expecting to push code — use `agents-cli deploy`. Terraform manages shell + IAM; deploy pushes code. |
 
@@ -258,8 +254,8 @@ Add secrets via extra `--update-env-vars` keys as needed (`PIXELS_HEADLESS_API_K
 
 1. **Is `7129954674127405056` still the active prod engine?** Confirm in Console; update this doc if superseded.
 2. **Does `api/director.ts` expect numeric ID or full `projects/.../reasoningEngines/...` string?** Align Vercel `VERTEX_REASONING_ENGINE_ID` format.
-3. **Is `PIXELS_HEADLESS_API_KEY` already set on the live Agent Engine env?** Not in committed `npm run deploy`; verify in Console → engine → Environment variables.
-4. **Dockerfile `data/` fix** — ship as a separate PR before or with the first post-catalog deploy?
+3. **Is `PIXELS_HEADLESS_API_KEY` on the live Agent Engine?** (Separate from Vercel.) Verify Console → engine → Environment variables; re-export and `npm run deploy` to rotate.
+4. **Dockerfile `data/`** — included in ship branch (`COPY data ./data`).
 5. **Staging engine** — do we want a second Reasoning Engine + Vercel preview env before prod deploy?
 6. **Grafana / Agento11y tokens** — should prod Agent Engine export OTLP to Grafana (`AGENTO11Y_*`, `OTEL_EXPORTER_OTLP_*`)? Optional for Pixels UX.
 7. **Remote A2A** — `WRITER_A2A_CARD_URL` / `DP_A2A_CARD_URL` / `EDITOR_A2A_CARD_URL` unset = in-process specialists (current default). Confirm we are not pointing at external card URLs in prod.

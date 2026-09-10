@@ -17,7 +17,7 @@
     "adk:api": "node scripts/run-adk.mjs api_server agent.ts --port 8765 --host 127.0.0.1",
     "adk:proxy": "node scripts/adk-camel-proxy.mjs",
     "grafana:verify": "node scripts/verify-grafana-mcp.mjs",
-    "deploy": "agents-cli deploy --project creative-ai-491118 --region us-east1 --update-env-vars CREATIVE_DIRECTOR_MODE=production,RENDERS_GCS_BUCKET=creative-ai-491118-creative-pixels-renders,VERTEX_LOCATION=us-central1,PIXELS_HEADLESS_URL=https://pixels-headless-3ortoh2aiq-uc.a.run.app",
+    "deploy": "bash scripts/deploy.sh",
     "eval": "agents-cli eval run --dataset tests/eval/datasets/basic-dataset.json --config tests/eval/eval_config.yaml --url http://127.0.0.1:8766 --app-name agent --concurrency 1"
   },
   "dependencies": {
