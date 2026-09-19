@@ -33,6 +33,7 @@ export interface BatchShotInput {
 
 export interface BatchShotQuote {
   scene_index: number;
+  shot_id: string;
   timestamp_start: string;
   timestamp_end: string;
   provider: GenerateProvider;
@@ -45,6 +46,14 @@ export interface BatchShotQuote {
   formatted_usd: string;
   seedance_quote_id?: string;
   provider_label: string;
+  /** Per-provider pricing from Pixels batch-quote (when remote). */
+  veo_quote?: {crtvai_required: string; formatted_usd: string; estimated_usdc6?: number};
+  seedance_quote?: {
+    crtvai_required: string;
+    formatted_usd: string;
+    estimated_usdc6?: number;
+    quote_id?: string;
+  };
 }
 
 export interface BatchRenderQuote {
@@ -59,6 +68,19 @@ export interface BatchRenderQuote {
   created_at: string;
   preferred_provider?: GenerateProvider;
   consistent_character: boolean;
+  /** Pixels server batch quote metadata (when remote quote succeeded). */
+  pixels_batch_quote_id?: string;
+  expires_at?: string;
+  remote_quote?: boolean;
+  totals?: {
+    all_veo: {crtvai_required: string; formatted_usd: string};
+    all_seedance: {crtvai_required: string; formatted_usd: string};
+    recommended_mix: {
+      crtvai_required: string;
+      formatted_usd: string;
+      providers?: Record<string, number>;
+    };
+  };
 }
 
 export interface StoredBatchQuote extends BatchRenderQuote {
@@ -100,6 +122,11 @@ export function buildShotPrompt(
   cameraMovement: string,
 ): string {
   return `${visualPrompt.trim()}. Camera movement: ${cameraMovement.trim()}. Music video aesthetic.`;
+}
+
+/** Stable shot id for Pixels batch APIs (bijection with scene_index). */
+export function shotIdForScene(sceneIndex: number): string {
+  return `shot-${sceneIndex}`;
 }
 
 export function selectProvider(input: {
@@ -183,6 +210,7 @@ export function mapStoryboardSceneToShot(
     const seedance = quoteSeedanceShot(durationSeconds, resolution);
     return {
       scene_index: scene.scene_index,
+      shot_id: shotIdForScene(scene.scene_index),
       timestamp_start: scene.timestamp_start,
       timestamp_end: scene.timestamp_end,
       provider: 'seedance',
@@ -201,6 +229,7 @@ export function mapStoryboardSceneToShot(
   const veo = quoteVeoShot(durationSeconds);
   return {
     scene_index: scene.scene_index,
+    shot_id: shotIdForScene(scene.scene_index),
     timestamp_start: scene.timestamp_start,
     timestamp_end: scene.timestamp_end,
     provider: 'veo',
@@ -274,6 +303,15 @@ export function getStoredBatchQuote(
   batchQuoteId: string,
 ): StoredBatchQuote | undefined {
   return quoteStore.get(batchQuoteId);
+}
+
+/** Re-key stored quote after Pixels returns a remote batchQuoteId. */
+export function rekeyStoredBatchQuote(
+  oldId: string,
+  quote: StoredBatchQuote,
+): void {
+  quoteStore.delete(oldId);
+  quoteStore.set(quote.batch_quote_id, quote);
 }
 
 export function clearStoredBatchQuote(batchQuoteId: string): void {
