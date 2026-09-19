@@ -117,7 +117,19 @@ async function enqueueShotJob(
         },
       };
     }
-    throw error;
+    return {
+      scene_index: sceneIndex,
+      shot_id: job.shotId,
+      provider: job.provider,
+      request_id: job.requestId,
+      status: 'failed',
+      progress: 0,
+      error: {
+        code: error instanceof PixelsGenerateError ? error.code : 'ENQUEUE_FAILED',
+        message:
+          error instanceof Error ? error.message : 'Per-shot enqueue failed after batch confirm.',
+      },
+    };
   }
 }
 
@@ -182,7 +194,20 @@ export async function confirmBatchRender(
     walletAddress: input.wallet_address ?? stored.wallet_address,
   };
 
-  const batchQuoteId = stored.pixels_batch_quote_id ?? stored.batch_quote_id;
+  if (!stored.remote_quote || !stored.pixels_batch_quote_id) {
+    return {
+      mock: false,
+      batch_quote_id: input.batch_quote_id,
+      status: 'error',
+      notice:
+        'No valid Pixels batch quote — remote batch-quote did not succeed. Re-call quote_batch_render with access_token and wallet_address.',
+      shot_count: stored.shot_count,
+      jobs: [],
+      clip_urls: [],
+    };
+  }
+
+  const batchQuoteId = stored.pixels_batch_quote_id;
   const selections = stored.shots.map((shot) => ({
     shotId: shot.shot_id,
     provider: shot.provider,

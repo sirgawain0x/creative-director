@@ -105,5 +105,29 @@ describe('quoteBatchRender', () => {
     expect(result.shots[0].formatted_usd).toBe('$0.99');
     expect(result.totals?.recommended_mix.formatted_usd).toBe('$0.99');
     expect(mockQuoteDirectorBatch).toHaveBeenCalledOnce();
+    expect(JSON.stringify(result)).not.toContain('privy-token');
+  });
+
+  it('does not echo access_token in tool response', async () => {
+    mockIsConfigured.mockReturnValue(false);
+
+    const result = await quoteBatchRender({
+      shots: [
+        {
+          scene_index: 1,
+          timestamp_start: '00:00',
+          timestamp_end: '00:08',
+          duration_seconds: 8,
+          visual_prompt: 'Test',
+          camera_movement: 'static',
+        },
+      ],
+      access_token: 'secret-privy-token',
+      wallet_address: '0xsecret',
+    });
+
+    expect(result).not.toHaveProperty('access_token');
+    expect(result).not.toHaveProperty('wallet_address');
+    expect(JSON.stringify(result)).not.toContain('secret-privy-token');
   });
 });

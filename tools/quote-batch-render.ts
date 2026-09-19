@@ -119,6 +119,21 @@ function applyRemoteBatchQuote(
   quote.total_formatted_usd = remote.totals.recommendedMix.formattedUsd ?? `$${(totalUsdc6 / 1_000_000).toFixed(2)}`;
 }
 
+function perShotConsistentCharacter(
+  input: QuoteBatchRenderInput,
+): Map<number, boolean> {
+  const map = new Map<number, boolean>();
+  const projectDefault = input.consistent_character ?? false;
+  for (const shot of input.shots) {
+    const perShot =
+      'consistent_character' in shot && shot.consistent_character != null
+        ? shot.consistent_character
+        : projectDefault;
+    map.set(shot.scene_index, perShot);
+  }
+  return map;
+}
+
 async function enrichWithRemoteBatchQuote(
   quote: BatchRenderQuote,
   auth: PixelsGenerateAuth,
@@ -128,6 +143,7 @@ async function enrichWithRemoteBatchQuote(
     aspect_ratio?: SeedanceAspectRatio;
     resolution?: SeedanceResolution;
     storyboard_id?: string;
+    per_shot_consistent_character: Map<number, boolean>;
   },
 ): Promise<boolean> {
   if (!isPixelsGenerateConfigured()) return false;
@@ -139,7 +155,10 @@ async function enrichWithRemoteBatchQuote(
         prompt: s.prompt,
         duration: s.duration_seconds,
         aspectRatio: s.aspect_ratio,
-        consistentCharacter: options.consistent_character ?? false,
+        consistentCharacter:
+          options.per_shot_consistent_character.get(s.scene_index) ??
+          options.consistent_character ??
+          false,
       })),
       providerPreference: options.preferred_provider,
       resolution: options.resolution ?? '720p',
@@ -167,6 +186,7 @@ export async function quoteBatchRender(
   });
 
   const localQuoteId = quote.batch_quote_id;
+  const stored = quote as StoredBatchQuote;
   let remoteEnriched = false;
   if (input.access_token && isPixelsGenerateConfigured()) {
     remoteEnriched = await enrichWithRemoteBatchQuote(
@@ -181,15 +201,22 @@ export async function quoteBatchRender(
         aspect_ratio: input.aspect_ratio,
         resolution: input.resolution,
         storyboard_id: input.storyboard_id,
+        per_shot_consistent_character: perShotConsistentCharacter(input),
       },
     );
     if (remoteEnriched && quote.batch_quote_id !== localQuoteId) {
-      rekeyStoredBatchQuote(localQuoteId, quote as StoredBatchQuote);
+      rekeyStoredBatchQuote(localQuoteId, stored);
+    } else if (!remoteEnriched) {
+      quote.notice +=
+        ' WARNING: Pixels batch-quote failed — prices are local estimates only; confirm will not proceed until batch-quote succeeds.';
     }
   }
 
+  // Never echo Privy token or wallet in tool output (stored in-memory for confirm only).
+  const {access_token: _at, wallet_address: _wa, ...safeQuote} = stored;
+
   return {
-    ...quote,
+    ...safeQuote,
     mock: false,
     pixels_api_configured: isPixelsGenerateConfigured(),
     remote_quote_enriched: remoteEnriched,

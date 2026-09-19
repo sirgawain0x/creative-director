@@ -111,6 +111,7 @@ describe('confirmBatchRender', () => {
     const localId = quote.batch_quote_id;
     quote.pixels_batch_quote_id = 'remote-bq-1';
     quote.batch_quote_id = 'remote-bq-1';
+    quote.remote_quote = true;
     rekeyStoredBatchQuote(localId, quote);
 
     const result = await confirmBatchRender({
@@ -154,6 +155,7 @@ describe('confirmBatchRender', () => {
     const localId = quote.batch_quote_id;
     quote.pixels_batch_quote_id = 'remote-bq-used';
     quote.batch_quote_id = 'remote-bq-used';
+    quote.remote_quote = true;
     rekeyStoredBatchQuote(localId, quote);
 
     const result = await confirmBatchRender({
@@ -165,6 +167,32 @@ describe('confirmBatchRender', () => {
     expect(result.status).toBe('error');
     expect(result.error_code).toBe('quote_already_confirmed');
     expect(mockEnqueueBatchShot).not.toHaveBeenCalled();
+  });
+
+  it('rejects confirm when remote batch quote did not succeed', async () => {
+    const quote = createBatchRenderQuote({
+      shots: [
+        {
+          scene_index: 1,
+          timestamp_start: '00:00',
+          timestamp_end: '00:08',
+          duration_seconds: 8,
+          visual_prompt: 'Test',
+          camera_movement: 'static',
+        },
+      ],
+      access_token: 'token',
+    });
+
+    const result = await confirmBatchRender({
+      batch_quote_id: quote.batch_quote_id,
+      user_confirmed: true,
+      access_token: 'token',
+    });
+
+    expect(result.status).toBe('error');
+    expect(result.notice).toContain('remote batch-quote');
+    expect(mockConfirmDirectorBatch).not.toHaveBeenCalled();
   });
 
   it('handles batch_shot_already_started per shot (409)', async () => {
@@ -189,6 +217,7 @@ describe('confirmBatchRender', () => {
     const localId = quote.batch_quote_id;
     quote.pixels_batch_quote_id = 'remote-bq-1';
     quote.batch_quote_id = 'remote-bq-1';
+    quote.remote_quote = true;
     rekeyStoredBatchQuote(localId, quote);
 
     const result = await confirmBatchRender({
