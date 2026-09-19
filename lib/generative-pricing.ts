@@ -35,3 +35,78 @@ export function veoModelId(tier: VeoTier): string {
   if (tier === 'lite') return 'veo-3.1-lite-generate-preview';
   return 'veo-3.1-generate-preview';
 }
+
+/** Retail $0.10 per credit — mirrors edit-pixels credits config. */
+const USDC6_PER_CREDIT = 100_000;
+
+export type NanobananaQuality = '0.5K' | '1K' | '2K' | '4K';
+
+const NANO_QUALITY_CREDITS: Record<NanobananaQuality, number> = {
+  '0.5K': 1,
+  '1K': 1,
+  '2K': 1,
+  '4K': 2,
+};
+
+const VEO_USD_PER_SEC: Record<VeoTier, Partial<Record<VeoQuality, number>>> = {
+  standard: {'720p': 0.4, '1080p': 0.4, '4K': 0.6},
+  fast: {'720p': 0.1, '1080p': 0.12, '4K': 0.3},
+  lite: {'720p': 0.05, '1080p': 0.08},
+};
+
+export function quoteVeoCredits(params: {
+  duration: number;
+  quality: VeoQuality;
+  tier: VeoTier;
+}): number {
+  const duration = clampFlowDuration(params.duration);
+  const quality = normalizeVeoQuality(params.quality, params.tier);
+  const usdPerSec = VEO_USD_PER_SEC[params.tier][quality];
+  if (!usdPerSec) {
+    throw new Error(
+      `Quality ${quality} is not supported for Veo tier ${params.tier}`,
+    );
+  }
+  const usd = duration * usdPerSec;
+  return Math.max(1, Math.ceil(usd / 0.1));
+}
+
+export function quoteNanobananaCredits(quality: NanobananaQuality): number {
+  return NANO_QUALITY_CREDITS[quality] ?? 1;
+}
+
+export function quoteFlowTotalCredits(input: {
+  duration: number;
+  quality: string;
+  tier: VeoTier;
+  stillCount: number;
+  stillQuality?: NanobananaQuality;
+}): number {
+  const stillQuality = input.stillQuality ?? '2K';
+  const stillCount = Math.min(2, Math.max(0, Math.floor(input.stillCount)));
+  const videoCredits = quoteVeoCredits({
+    duration: input.duration,
+    quality: normalizeVeoQuality(input.quality, input.tier),
+    tier: input.tier,
+  });
+  const stillCredits =
+    stillCount > 0 ? stillCount * quoteNanobananaCredits(stillQuality) : 0;
+  return videoCredits + stillCredits;
+}
+
+export function creditsToUsdc6(credits: number): number {
+  if (!Number.isFinite(credits) || credits <= 0) return 0;
+  return Math.max(1, Math.ceil(credits)) * USDC6_PER_CREDIT;
+}
+
+export function quoteFlowCreditsUsdc6(credits: number): {
+  estimatedUsdc6: number;
+  minCrtvaiWei: bigint;
+} | null {
+  const estimatedUsdc6 = creditsToUsdc6(credits);
+  if (estimatedUsdc6 <= 0) return null;
+  return {
+    estimatedUsdc6,
+    minCrtvaiWei: BigInt(estimatedUsdc6) * 10n ** 12n,
+  };
+}

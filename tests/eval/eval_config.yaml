@@ -1,4 +1,6 @@
 # Planning-mode Creative Director: research + storyboard, no production claims.
+# Production mode (CREATIVE_DIRECTOR_MODE=production) uses quote_batch_render /
+# confirm_batch_render — same no_fake_asset_urls rule applies to agent replies.
 metrics_to_run:
   - multi_turn_task_success
   - no_fake_asset_urls

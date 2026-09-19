@@ -13,6 +13,7 @@ set -euo pipefail
 
 BASE_VARS=(
   "CREATIVE_DIRECTOR_MODE=production"
+  "PIXELS_API_BASE_URL=https://create.creativeplatform.xyz"
   "RENDERS_GCS_BUCKET=creative-ai-491118-creative-pixels-renders"
   "VERTEX_LOCATION=us-central1"
   "PIXELS_HEADLESS_URL=https://pixels-headless-3ortoh2aiq-uc.a.run.app"
