@@ -1,10 +1,10 @@
 /**
  * HTTP client for Creative Pixels Generate APIs (edit-pixels).
  * Contract mirrors:
- *   POST /api/pixels-render-quote
- *   POST /api/pixels-render-veo
- *   POST /api/seedance-quote
- *   POST /api/seedance-generate
+ *   POST /api/pixels-director-batch-quote
+ *   POST /api/pixels-director-batch-confirm
+ *   POST /api/pixels-render-veo        (batch enqueue via batchConfirmId)
+ *   POST /api/seedance-generate          (batch enqueue via batchConfirmId)
  *   GET  /api/pixels-generate-task?id=...
  */
 
@@ -105,14 +105,126 @@ async function parseJsonResponse(response: Response): Promise<unknown> {
 }
 
 function errorFrom(data: unknown, status: number): PixelsGenerateError {
-  const payload = data as {error?: string; message?: string};
-  const code = payload?.error ?? 'HTTP_ERROR';
+  const payload = data as {error?: string; code?: string; message?: string};
+  const code = payload?.code ?? payload?.error ?? 'HTTP_ERROR';
   const message =
     payload?.message ??
     (typeof payload?.error === 'string'
       ? payload.error
       : `Pixels Generate request failed (${status})`);
   return new PixelsGenerateError(message, code, status);
+}
+
+/** Batch API error codes from edit-pixels director bridge. */
+export const PIXELS_BATCH_ERROR_CODES = {
+  quote_already_confirmed: 'quote_already_confirmed',
+  selection_mismatch: 'selection_mismatch',
+  batch_shot_already_started: 'batch_shot_already_started',
+} as const;
+
+export type PixelsBatchErrorCode =
+  (typeof PIXELS_BATCH_ERROR_CODES)[keyof typeof PIXELS_BATCH_ERROR_CODES];
+
+export function isPixelsBatchError(
+  error: unknown,
+  code: PixelsBatchErrorCode,
+): boolean {
+  return error instanceof PixelsGenerateError && error.code === code;
+}
+
+export interface DirectorBatchShotInput {
+  shotId: string;
+  prompt: string;
+  duration: number;
+  aspectRatio?: string;
+  consistentCharacter?: boolean;
+}
+
+export interface DirectorProviderQuote {
+  provider: GenerateProvider;
+  crtvaiRequired: string;
+  formattedUsd?: string;
+  estimatedUsdc6?: number;
+  quoteId?: string;
+}
+
+export interface DirectorBatchQuoteShot {
+  shotId: string;
+  recommendedProvider: GenerateProvider;
+  generate: {
+    prompt: string;
+    duration: number;
+    veoDuration?: number;
+    seedanceDuration?: number;
+    aspect_ratio: string;
+    resolution: string;
+  };
+  veo: DirectorProviderQuote;
+  seedance: DirectorProviderQuote;
+}
+
+export interface DirectorBatchQuoteResponse {
+  batchQuoteId: string;
+  expiresAt: string;
+  shotCount: number;
+  shots: DirectorBatchQuoteShot[];
+  totals: {
+    allVeo: DirectorProviderQuote;
+    allSeedance: DirectorProviderQuote;
+    recommendedMix: DirectorProviderQuote & {
+      providers?: Record<string, number>;
+    };
+  };
+}
+
+export interface DirectorBatchSelection {
+  shotId: string;
+  provider: GenerateProvider;
+  requestId: string;
+}
+
+export interface DirectorBatchConfirmResponse {
+  batchConfirmId: string;
+  batchQuoteId: string;
+  paymentTxHash?: string;
+  totalCrtvaiRequired: string;
+  totalCrtvaiDisplay?: number;
+  jobs: DirectorBatchConfirmJob[];
+  enqueue: {
+    batchConfirmId: string;
+    note: string;
+  };
+}
+
+export interface DirectorBatchConfirmJob {
+  shotId: string;
+  requestId: string;
+  provider: GenerateProvider;
+  status: string;
+  seedanceQuoteId?: string | null;
+  crtvaiRequired?: string;
+  pollUrl?: string;
+  generateEndpoint: string;
+}
+
+export interface QuoteDirectorBatchInput {
+  shots: DirectorBatchShotInput[];
+  storyboardId?: string;
+  providerPreference?: GenerateProvider;
+  resolution?: SeedanceResolution;
+}
+
+export interface ConfirmDirectorBatchInput {
+  batchQuoteId: string;
+  selections: DirectorBatchSelection[];
+  paymentTxHash?: string;
+}
+
+export interface EnqueueBatchShotInput {
+  generateEndpoint: string;
+  batchConfirmId: string;
+  shotId: string;
+  requestId: string;
 }
 
 async function pixelsJson<T>(
@@ -246,6 +358,121 @@ export async function startSeedanceRender(
     status,
     progress: data.progress ?? (status === 'completed' ? 100 : 0),
     model: data.model,
+    output_video_url: data.output?.video_url,
+    cost_usdc6: data.costUsdc6,
+    crtvai_required: data.crtvaiRequired,
+    error: data.error,
+  };
+}
+
+function batchAuthBody(
+  auth: PixelsGenerateAuth,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {...extra, token: auth.accessToken};
+  if (auth.walletAddress) body.walletAddress = auth.walletAddress;
+  return body;
+}
+
+/** Phase 2 batch quote — single call for all shots, no spend. */
+export async function quoteDirectorBatch(
+  auth: PixelsGenerateAuth,
+  input: QuoteDirectorBatchInput,
+): Promise<DirectorBatchQuoteResponse> {
+  const body = batchAuthBody(auth, {
+    shots: input.shots.map((s) => ({
+      shotId: s.shotId,
+      prompt: s.prompt,
+      duration: s.duration,
+      aspectRatio: s.aspectRatio ?? '16:9',
+      consistentCharacter: s.consistentCharacter ?? false,
+    })),
+    ...(input.storyboardId ? {storyboardId: input.storyboardId} : {}),
+    ...(input.providerPreference
+      ? {providerPreference: input.providerPreference}
+      : {}),
+    ...(input.resolution ? {resolution: input.resolution} : {}),
+  });
+
+  return pixelsJson<DirectorBatchQuoteResponse>(
+    '/api/pixels-director-batch-quote',
+    {method: 'POST', body: JSON.stringify(body)},
+    auth,
+  );
+}
+
+/** Phase 2 batch confirm — binds quote + payment, returns job descriptors. */
+export async function confirmDirectorBatch(
+  auth: PixelsGenerateAuth,
+  input: ConfirmDirectorBatchInput,
+): Promise<DirectorBatchConfirmResponse> {
+  const body = batchAuthBody(auth, {
+    batchQuoteId: input.batchQuoteId,
+    selections: input.selections,
+    ...(input.paymentTxHash ? {paymentTxHash: input.paymentTxHash} : {}),
+  });
+
+  return pixelsJson<DirectorBatchConfirmResponse>(
+    '/api/pixels-director-batch-confirm',
+    {method: 'POST', body: JSON.stringify(body)},
+    auth,
+  );
+}
+
+/**
+ * Enqueue a single shot after batch confirm.
+ * Only walletAddress, token, batchConfirmId, shotId, requestId — no payment.
+ */
+export async function enqueueBatchShot(
+  auth: PixelsGenerateAuth,
+  input: EnqueueBatchShotInput,
+): Promise<PixelsGenerateJobResult> {
+  const body = batchAuthBody(auth, {
+    batchConfirmId: input.batchConfirmId,
+    shotId: input.shotId,
+    requestId: input.requestId,
+  });
+
+  const timeoutMs =
+    input.generateEndpoint.includes('seedance') ? 600_000 : 300_000;
+
+  const data = await pixelsJson<{
+    id: string;
+    status: string;
+    progress: number;
+    model?: string;
+    pixelsRequestId?: string;
+    veoTaskId?: string;
+    output?: {video_url?: string};
+    costUsdc6?: number;
+    crtvaiRequired?: string;
+    error?: {code: string; message: string; type?: string};
+  }>(
+    input.generateEndpoint,
+    {method: 'POST', body: JSON.stringify(body), timeoutMs},
+    auth,
+  );
+
+  const provider: GenerateProvider = input.generateEndpoint.includes('seedance')
+    ? 'seedance'
+    : 'veo';
+
+  const status =
+    data.status === 'completed'
+      ? 'completed'
+      : data.status === 'failed'
+        ? 'failed'
+        : data.status === 'queued'
+          ? 'queued'
+          : 'processing';
+
+  return {
+    request_id: data.pixelsRequestId ?? input.requestId,
+    provider,
+    status,
+    progress: data.progress ?? (status === 'completed' ? 100 : 0),
+    model: data.model,
+    veo_task_id: data.veoTaskId ?? (provider === 'veo' ? data.id : undefined),
     output_video_url: data.output?.video_url,
     cost_usdc6: data.costUsdc6,
     crtvai_required: data.crtvaiRequired,

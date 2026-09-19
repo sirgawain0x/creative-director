@@ -65,7 +65,7 @@ npm run typecheck
 | Mode | Env | Behavior |
 |------|-----|----------|
 | **Planning** (default) | unset or `CREATIVE_DIRECTOR_MODE=planning` | Research + storyboard only |
-| **Production** | `CREATIVE_DIRECTOR_MODE=production` | Storyboard → `quote_batch_render` → user confirm → `confirm_batch_render` (Pixels Generate Veo/Seedance). No fake clip URLs. |
+| **Production** | `CREATIVE_DIRECTOR_MODE=production` | Storyboard → `quote_batch_render` (Pixels `pixels-director-batch-quote`) → user confirm → `confirm_batch_render` (batch-confirm + per-shot enqueue). No fake clip URLs. |
 
 ## Grafana Cloud MCP (optional)
 
@@ -125,6 +125,14 @@ Production batch-quote flow (requires `PIXELS_API_BASE_URL` for real renders):
 ```bash
 CREATIVE_DIRECTOR_MODE=production PIXELS_API_BASE_URL=https://create.creativeplatform.xyz npm run adk:run
 ```
+
+| Env | Purpose |
+|-----|---------|
+| `PIXELS_API_BASE_URL` | edit-pixels origin for batch-quote, batch-confirm, and per-shot enqueue |
+| `DIRECTOR_API_SECRET` | Optional shared secret (`x-director-secret`) matching edit-pixels |
+| `CREATIVE_DIRECTOR_MODE=production` | Enables `quote_batch_render` / `confirm_batch_render` production path |
+
+Contract: [edit-pixels director-pixels-bridge.md](https://github.com/sirgawain0x/edit-pixels/blob/staging/docs/director-pixels-bridge.md).
 
 ## Reproducible Testing
 
