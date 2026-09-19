@@ -23,11 +23,15 @@ import {creativeDirectorModel} from './lib/model.js';
 import {
   isC2paEmbedConfigured,
   isHeadlessAssemblyConfigured,
+  isLegacyVertexRenderConfigured,
+  isPixelsGenerateConfigured,
   isProductionRenderConfigured,
   isProvenanceConfigured,
 } from './lib/render-config.js';
 import {assembleAndSyncTimeline} from './tools/assemble-timeline.js';
+import {confirmBatchRender} from './tools/confirm-batch-render.js';
 import {generateVideoCut} from './tools/generate-video-cut.js';
+import {quoteBatchRender} from './tools/quote-batch-render.js';
 import {signC2paManifest} from './tools/sign-c2pa-manifest.js';
 
 /** `planning` (default) = research + storyboard only. `production` = also call mock render tools. */
@@ -39,6 +43,8 @@ const agentMode =
 const MOCK_NOTICE =
   'MOCK ONLY — no real video, GCS object, or C2PA signature was created. Do not present this URL as a downloadable asset.';
 
+const pixelsGenerateEnabled = isPixelsGenerateConfigured();
+const legacyVertexRenderEnabled = isLegacyVertexRenderConfigured();
 const productionRenderEnabled = isProductionRenderConfigured();
 const headlessAssemblyEnabled =
   productionRenderEnabled && isHeadlessAssemblyConfigured();
@@ -88,13 +94,70 @@ const researchTools = [
 ];
 
 // ----------------------------------------------------------------------
-// Mock / live video production function tools
+// Production render tools — Pixels Generate quote/confirm (Phase 2) or legacy Vertex
 // ----------------------------------------------------------------------
+const quoteBatchRenderTool = new FunctionTool({
+  name: 'quote_batch_render',
+  description:
+    'After storyboard approval, price all shots via Pixels Generate (Veo or Seedance per shot). Returns batch_quote_id and per-shot CRTVAI estimates. Does NOT spend or render.',
+  parameters: z.object({
+    shots: z
+      .array(
+        z.object({
+          scene_index: z.number(),
+          timestamp_start: z.string(),
+          timestamp_end: z.string(),
+          duration_seconds: z.number().optional(),
+          visual_prompt: z.string(),
+          camera_movement: z.string(),
+          lighting: z.string().optional(),
+          consistent_character: z.boolean().optional(),
+        }),
+      )
+      .min(1),
+    preferred_provider: z
+      .enum(['veo', 'seedance'])
+      .optional()
+      .describe('User provider preference when set'),
+    consistent_character: z
+      .boolean()
+      .optional()
+      .describe('When true, default provider is Seedance for character consistency'),
+    aspect_ratio: z
+      .enum(['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'])
+      .optional(),
+    resolution: z.enum(['480p', '720p']).optional(),
+    wallet_address: z.string().optional(),
+    access_token: z.string().optional(),
+  }),
+  execute: async (params) => quoteBatchRender(params),
+});
+
+const confirmBatchRenderTool = new FunctionTool({
+  name: 'confirm_batch_render',
+  description:
+    'After explicit user confirmation of a batch quote, start Pixels Generate jobs (Veo or Seedance). Returns job request_ids — never fake clip URLs.',
+  parameters: z.object({
+    batch_quote_id: z.string(),
+    user_confirmed: z
+      .boolean()
+      .describe('Must be true — explicit human approval to spend CRTVAI'),
+    access_token: z.string().optional(),
+    wallet_address: z.string().optional(),
+    payment_tx_hash: z.string().optional(),
+  }),
+  execute: async (params) => confirmBatchRender(params),
+});
+
 const generateVideoCutTool = new FunctionTool({
   name: 'generate_video_cut',
-  description: productionRenderEnabled
-    ? 'Renders a cinematic video cut via Gemini (start frame) + Veo 3.1 i2v, uploads MP4 to GCS, and returns the clip URL.'
-    : 'MOCK STUB: Simulates rendering a cinematic video cut. Returns fake URLs only — does not call Veo/Imagen or write to GCS.',
+  description: pixelsGenerateEnabled
+    ? 'DEPRECATED in production — use quote_batch_render then confirm_batch_render. Does not render.'
+    : legacyVertexRenderEnabled
+      ? 'Renders a cinematic video cut via Gemini (start frame) + Veo 3.1 i2v, uploads MP4 to GCS, and returns the clip URL.'
+      : agentMode === 'production'
+        ? 'DISABLED — use quote_batch_render and confirm_batch_render. Never returns fake URLs.'
+        : 'Planning mode only — do not call in planning.',
   parameters: z.object({
     scene_index: z.number().describe('The sequence number of the scene (1, 2, 3...)'),
     timestamp_start: z.string().describe('Start timestamp (e.g. 00:00)'),
@@ -110,19 +173,22 @@ const generateVideoCutTool = new FunctionTool({
       .describe('e.g. slow drone aerial, dolly tracking in, handheld orbit'),
   }),
   execute: async (params) => {
-    if (productionRenderEnabled) {
+    if (pixelsGenerateEnabled || agentMode === 'production') {
+      return {
+        mock: false,
+        status: 'use_batch_quote_flow',
+        notice:
+          'Call quote_batch_render after storyboard approval, then confirm_batch_render after the user confirms the batch quote. Do not invent clip URLs.',
+      };
+    }
+    if (legacyVertexRenderEnabled) {
       return generateVideoCut(params);
     }
-
-    const {scene_index, timestamp_start, timestamp_end, visual_prompt} = params;
     return {
-      mock: true,
-      status: 'mock_rendered',
-      notice: MOCK_NOTICE,
-      scene_index,
-      timecode: `${timestamp_start} - ${timestamp_end}`,
-      clip_url: `https://storage.googleapis.com/creative-pixels-renders/MOCK_cut_${scene_index}.mp4`,
-      prompt: visual_prompt,
+      mock: false,
+      status: 'render_unavailable',
+      notice:
+        'No render backend configured. Set PIXELS_API_BASE_URL or RENDERS_GCS_BUCKET + Vertex.',
     };
   },
 });
@@ -143,6 +209,17 @@ const assembleTimelineTool = new FunctionTool({
   execute: async (params) => {
     if (headlessAssemblyEnabled) {
       return assembleAndSyncTimeline(params);
+    }
+
+    if (agentMode === 'production') {
+      return {
+        mock: false,
+        status: 'assembly_unavailable',
+        notice:
+          'PIXELS_HEADLESS_URL not configured. Cannot assemble timeline — do not invent master URLs.',
+        project: params.project_title,
+        total_cuts: params.clip_urls.length,
+      };
     }
 
     const {project_title, clip_urls} = params;
@@ -187,6 +264,17 @@ const signC2paTool = new FunctionTool({
       return signC2paManifest(params);
     }
 
+    if (agentMode === 'production') {
+      return {
+        mock: false,
+        status: 'c2pa_unavailable',
+        notice:
+          'Provenance pipeline not configured. Cannot sign C2PA — do not claim signing occurred.',
+        authenticated_file: params.master_video_url,
+        issuer: params.creator_did,
+      };
+    }
+
     const {master_video_url, creator_did, ai_models_used} = params;
     return {
       mock: true,
@@ -206,6 +294,8 @@ const signC2paTool = new FunctionTool({
 const productionTools = [
   ...researchTools,
   editorTool,
+  quoteBatchRenderTool,
+  confirmBatchRenderTool,
   generateVideoCutTool,
   assembleTimelineTool,
   signC2paTool,
@@ -234,79 +324,98 @@ const MOCK_PIPELINE_RULES = `- Every tool result with mock: true is a SIMULATION
 - Never tell the user a real file exists in GCS or that C2PA was cryptographically signed.
 - Include a short "Mock pipeline" section summarizing stub outputs.`;
 
-function liveCutsNote(): string {
-  return `'generate_video_cut' renders real MP4 clips (Gemini still + Veo 3.1) and uploads them to GCS.`;
+function batchQuoteNote(): string {
+  if (pixelsGenerateEnabled) {
+    return `'quote_batch_render' prices all storyboard shots (Veo or Seedance) and returns batch_quote_id — no CRTVAI spend.
+'confirm_batch_render' starts real Pixels Generate jobs only after explicit user_confirmed: true.
+Never invent clip URLs; only share output_video_url from confirm_batch_render jobs when present.`;
+  }
+  if (legacyVertexRenderEnabled) {
+    return `'generate_video_cut' renders real MP4 clips (Gemini still + Veo 3.1) and uploads them to GCS.`;
+  }
+  return `'quote_batch_render' returns priced batch quotes. Configure PIXELS_API_BASE_URL for real renders via confirm_batch_render.`;
 }
 
 const productionAgent = new LlmAgent({
   name: 'Creative_Director_AI',
   description: productionRenderEnabled
-    ? headlessAssemblyEnabled
-      ? provenanceEnabled
-        ? c2paEmbedEnabled
-          ? 'Production-mode Creative Director: swarm + real Veo cuts, headless assembly, GCS provenance, and headless C2PA embed.'
-          : 'Production-mode Creative Director: swarm + real Veo cuts, headless assembly, and GCS provenance (C2PA signing in Pixels UI).'
-        : 'Production-mode Creative Director: swarm + real Veo cuts + headless timeline assembly; C2PA remains mocked.'
-      : provenanceEnabled
-        ? 'Production-mode Creative Director: swarm + real Veo cuts and GCS provenance metadata; assembly mocked.'
-        : 'Production-mode Creative Director: swarm + real Veo cuts to GCS; assembly and C2PA remain mocked.'
-    : 'Production-mode Creative Director: swarm storyboard plus MOCK render/assemble/C2PA pipeline stubs.',
+    ? pixelsGenerateEnabled
+      ? 'Production-mode Creative Director: swarm + Pixels Generate batch quote/confirm (Veo or Seedance).'
+      : headlessAssemblyEnabled
+        ? provenanceEnabled
+          ? c2paEmbedEnabled
+            ? 'Production-mode Creative Director: swarm + legacy Veo cuts, headless assembly, GCS provenance, and headless C2PA embed.'
+            : 'Production-mode Creative Director: swarm + legacy Veo cuts, headless assembly, and GCS provenance (C2PA signing in Pixels UI).'
+          : 'Production-mode Creative Director: swarm + legacy Veo cuts + headless timeline assembly.'
+        : provenanceEnabled
+          ? 'Production-mode Creative Director: swarm + legacy Veo cuts and GCS provenance metadata.'
+          : 'Production-mode Creative Director: swarm + legacy Veo cuts to GCS.'
+    : 'Production-mode Creative Director: swarm storyboard + batch quote flow (configure PIXELS_API_BASE_URL for renders).',
   model: creativeDirectorModel,
   instruction: productionRenderEnabled
-    ? headlessAssemblyEnabled
-      ? provenanceEnabled
-        ? c2paEmbedEnabled
-          ? `You are Creative Director AI in PRODUCTION MODE (LIVE CUTS + ASSEMBLY + PROVENANCE + C2PA EMBED).
-${liveCutsNote()}
+    ? pixelsGenerateEnabled
+      ? `You are Creative Director AI in PRODUCTION MODE (PIXELS GENERATE BATCH QUOTE).
+${batchQuoteNote()}
+After storyboard approval call quote_batch_render — present total CRTVAI and per-shot provider/cost.
+Wait for explicit user confirmation before confirm_batch_render with user_confirmed: true.
+Never auto-spend CRTVAI. Never invent GCS or mock_cut clip URLs.
+
+${productionSwarmWorkflow(`STRICT RULES:
+- Use quote_batch_render then confirm_batch_render — not generate_video_cut.
+- Only share clip URLs from confirm_batch_render jobs[].output_video_url when returned by the API.
+- Do not claim renders completed until jobs report completed status.
+${headlessAssemblyEnabled ? "- After all clips complete, delegate assembly to editor_agent and call assemble_and_sync_timeline." : ''}
+${provenanceEnabled ? PROVENANCE_RULES : ''}`)}`
+      : headlessAssemblyEnabled
+        ? provenanceEnabled
+          ? c2paEmbedEnabled
+            ? `You are Creative Director AI in PRODUCTION MODE (LEGACY VEO + ASSEMBLY + PROVENANCE + C2PA EMBED).
+${batchQuoteNote()}
 'assemble_and_sync_timeline' stitches clips with master audio via Pixels headless and uploads a real master MP4.
 'sign_c2pa_manifest' writes provenance sidecars and cryptographically signs the master via Pixels headless (cryptographically_signed: true, signed_master_url).
 
 ${productionSwarmWorkflow(`STRICT RULES:
 - Treat generate_video_cut, assemble_and_sync_timeline, and sign_c2pa_manifest results with mock: false as real.
 ${PROVENANCE_RULES}`)}`
-          : `You are Creative Director AI in PRODUCTION MODE (LIVE CUTS + ASSEMBLY + PROVENANCE).
-${liveCutsNote()}
+            : `You are Creative Director AI in PRODUCTION MODE (LEGACY VEO + ASSEMBLY + PROVENANCE).
+${batchQuoteNote()}
 'assemble_and_sync_timeline' stitches clips with master audio via Pixels headless and uploads a real master MP4.
 'sign_c2pa_manifest' records C2PA provenance metadata in GCS (unsigned / pending_user_sign).
 
 ${productionSwarmWorkflow(`STRICT RULES:
 - Treat generate_video_cut, assemble_and_sync_timeline, and sign_c2pa_manifest results with mock: false as real.
 ${PROVENANCE_RULES}`)}`
-        : `You are Creative Director AI in PRODUCTION MODE (LIVE CUTS + ASSEMBLY).
-${liveCutsNote()}
+          : `You are Creative Director AI in PRODUCTION MODE (LEGACY VEO + ASSEMBLY).
+${batchQuoteNote()}
 'assemble_and_sync_timeline' stitches those clips with master audio via Pixels headless and uploads a real master MP4.
-'sign_c2pa_manifest' is still a MOCK stub (mock: true).
 
 ${productionSwarmWorkflow(`STRICT RULES:
-- Treat generate_video_cut and assemble_and_sync_timeline results with mock: false as real downloadable assets.
-- Results from sign_c2pa_manifest with mock: true are SIMULATIONS — say so explicitly.`)}`
-      : provenanceEnabled
-        ? `You are Creative Director AI in PRODUCTION MODE (LIVE CUTS + PROVENANCE).
-'generate_video_cut' renders real MP4 clips to GCS.
-'assemble_and_sync_timeline' is still a MOCK stub.
+- Treat generate_video_cut and assemble_and_sync_timeline results with mock: false as real downloadable assets.`)}`
+        : provenanceEnabled
+          ? `You are Creative Director AI in PRODUCTION MODE (LEGACY VEO + PROVENANCE).
+${batchQuoteNote()}
 'sign_c2pa_manifest' records provenance metadata in GCS (unsigned).
 
 ${productionSwarmWorkflow(`STRICT RULES:
 - generate_video_cut with mock: false are real clips.
 ${PROVENANCE_RULES}`)}`
-        : `You are Creative Director AI in PRODUCTION MODE (PARTIAL LIVE PIPELINE).
-${liveCutsNote()}
-'assemble_and_sync_timeline' and 'sign_c2pa_manifest' are still MOCK stubs (mock: true).
+          : `You are Creative Director AI in PRODUCTION MODE (LEGACY VEO PIPELINE).
+${batchQuoteNote()}
 
 ${productionSwarmWorkflow(`STRICT RULES:
 - Treat generate_video_cut results with mock: false as real downloadable clips; share clip_url as the asset link.
-- Results from assemble_and_sync_timeline and sign_c2pa_manifest with mock: true are SIMULATIONS — say so explicitly.
-- Prefix mock assembly/C2PA URLs with "MOCK (not downloadable):".
-- Do not claim C2PA was cryptographically signed.`)}`
-    : `You are Creative Director AI in PRODUCTION MODE (MOCK PIPELINE).
-Video tools are stubs — they return fake URLs labeled mock: true.
+- Never invent download URLs.`)}`
+    : `You are Creative Director AI in PRODUCTION MODE (QUOTE-ONLY UNTIL PIXELS API CONFIGURED).
+${batchQuoteNote()}
 
 ${productionSwarmWorkflow(`STRICT RULES:
-${MOCK_PIPELINE_RULES}`)}`,
+- Call quote_batch_render after storyboard approval; never invent clip URLs.
+- confirm_batch_render requires PIXELS_API_BASE_URL on the agent runtime.
+- Do not return mock GCS or mock_cut URLs.`)}`,
   tools: productionTools,
 });
 
-/** Active agent for `adk run` / `adk web`. Default: planning. Set CREATIVE_DIRECTOR_MODE=production for mock pipeline. */
+/** Active agent for `adk run` / `adk web`. Default: planning. Set CREATIVE_DIRECTOR_MODE=production for batch quote/render flow. */
 export const rootAgent =
   agentMode === 'production' ? productionAgent : planningAgent;
 

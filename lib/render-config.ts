@@ -1,12 +1,23 @@
+import {isPixelsGenerateConfigured} from './pixels-generate-client.js';
 import {isVertexGenerativeConfigured} from './vertex-generative.js';
 
-/** True when real Vertex + GCS render pipeline should run (vs mock stubs). */
+/** True when Pixels Generate quote/render APIs are reachable (Phase 2). */
+export {isPixelsGenerateConfigured};
+
+/** True when legacy direct Vertex + GCS render pipeline should run. */
+export function isLegacyVertexRenderConfigured(): boolean {
+  if (!isVertexGenerativeConfigured()) return false;
+  return Boolean(process.env.RENDERS_GCS_BUCKET?.trim());
+}
+
+/** True when any real render path is available (Pixels Generate or legacy Vertex). */
 export function isProductionRenderConfigured(): boolean {
+  if (isPixelsGenerateConfigured()) return true;
   if (process.env.RENDERS_GCS_BUCKET?.trim()) {
     return isVertexGenerativeConfigured();
   }
   if (process.env.CREATIVE_DIRECTOR_MODE?.toLowerCase() === 'production') {
-    return isVertexGenerativeConfigured();
+    return isLegacyVertexRenderConfigured();
   }
   return false;
 }

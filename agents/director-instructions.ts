@@ -4,12 +4,13 @@ export const SWARM_PACKAGE_SHAPE = `Deliverable package fields (text is fine; ke
 - genre: catalogGenre from select_genre_pack (also note packId + source; include warning if present)
 - treatment: from writer_agent
 - storyboard: scenes with scene_index, timestamp_start, timestamp_end, camera_movement, lighting, visual_prompt
-- clip_urls / master_url: only after real or mock tool results — never invent them`;
+- batch_quote: from quote_batch_render (batch_quote_id, per-shot provider, estimated CRTVAI) — after storyboard approval
+- clip_urls / master_url: only after confirm_batch_render or real tool results — never invent them`;
 
 /** Grafana Cloud MCP tools are prefixed with grafana_ when enabled. */
 export const GRAFANA_OBSERVABILITY_RULES = `Grafana Cloud MCP (tools prefixed grafana_):
 - Use when the user asks about pipeline health, render latency, token/cost spikes, failed Veo/assembly/C2PA runs, or prior session errors.
-- After generate_video_cut, assemble_and_sync_timeline, or sign_c2pa_manifest fails or times out: query Loki logs and/or Tempo traces, summarize root cause, and share a grafana_generate_deeplink when useful.
+- After quote_batch_render, confirm_batch_render, generate_video_cut, assemble_and_sync_timeline, or sign_c2pa_manifest fails or times out: query Loki logs and/or Tempo traces, summarize root cause, and share a grafana_generate_deeplink when useful.
 - Before a large production render batch: optionally check recent error rates via Prometheus/Loki; warn the user if the pipeline looks unhealthy.
 - Prefer read tools (query_*, search_*, tempo_*, list_*). Only create_annotation when the user asks to mark a dashboard event.
 - Never invent metrics, log lines, or dashboard URLs — only report what Grafana tools return.`;
@@ -56,10 +57,11 @@ Workflow:
 2. When calling writer_agent, paste the returned pack markdown verbatim in the tool message, plus catalogGenre, packId, and source.
 3. When calling dp_agent, paste the same pack markdown, treatment, BPM, and genre ids.
 4. Delegate research to search_specialist / url_specialist when needed.
-5. HITL: Unless this turn already contains explicit render approval ("render", "approved", "go ahead"), STOP and present the storyboard. Do not call generate_video_cut yet.
-6. After approval, call generate_video_cut per scene using dp_agent visual_prompt and camera_movement.
-7. Delegate clip order and assembly args to editor_agent (pass clip_urls from tools — never invent URLs).
-8. Call assemble_and_sync_timeline then sign_c2pa_manifest using editor_agent arguments.${grafanaStep}
+5. HITL: Unless this turn already contains explicit render approval ("render", "approved", "go ahead"), STOP and present the storyboard. Do not call quote_batch_render yet.
+6. After storyboard approval, call quote_batch_render with all scenes (map dp_agent visual_prompt + camera_movement). Present batch_quote_id and per-shot CRTVAI totals. Never auto-spend.
+7. After explicit batch quote confirmation ("confirm", "approved", "go ahead" on the quote), call confirm_batch_render with user_confirmed: true and batch_quote_id.
+8. Delegate clip order and assembly args to editor_agent (pass clip_urls only from confirm_batch_render jobs — never invent URLs).
+9. When clips exist, call assemble_and_sync_timeline then sign_c2pa_manifest using editor_agent arguments.${grafanaStep}
 
 ${SWARM_PACKAGE_SHAPE}
 

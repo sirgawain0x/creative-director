@@ -52,6 +52,7 @@ Ask the user: Option A (simple single-project) or Option B (full CI/CD pipeline 
 
 ## Operational Guidelines for Coding Agents
 
+- **Production render flow**: `quote_batch_render` → user confirm → `confirm_batch_render` via Pixels Generate (`PIXELS_API_BASE_URL`). Never auto-spend CRTVAI or invent clip URLs.
 - **Code preservation**: Only modify code directly targeted by the user's request. Preserve all surrounding code, config values (e.g., `model`), comments, and formatting.
 - **NEVER change the model** unless explicitly asked.
 - **Model 404 errors**: Fix `GOOGLE_CLOUD_LOCATION` (e.g., `global` instead of `us-east1`), not the model name.

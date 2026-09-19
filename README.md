@@ -65,7 +65,7 @@ npm run typecheck
 | Mode | Env | Behavior |
 |------|-----|----------|
 | **Planning** (default) | unset or `CREATIVE_DIRECTOR_MODE=planning` | Research + storyboard only |
-| **Production** | `CREATIVE_DIRECTOR_MODE=production` | Full tool loop; video/C2PA tools are **mocks** |
+| **Production** | `CREATIVE_DIRECTOR_MODE=production` | Storyboard → `quote_batch_render` → user confirm → `confirm_batch_render` (Pixels Generate Veo/Seedance). No fake clip URLs. |
 
 ## Grafana Cloud MCP (optional)
 
@@ -120,10 +120,10 @@ npm run adk:run
 npm run adk:web
 ```
 
-Mock production pipeline:
+Production batch-quote flow (requires `PIXELS_API_BASE_URL` for real renders):
 
 ```bash
-CREATIVE_DIRECTOR_MODE=production npm run adk:run
+CREATIVE_DIRECTOR_MODE=production PIXELS_API_BASE_URL=https://create.creativeplatform.xyz npm run adk:run
 ```
 
 ## Reproducible Testing
