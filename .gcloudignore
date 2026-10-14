@@ -16,9 +16,14 @@ artifacts/
 .env
 .env.*
 
-# Docs and scratch outputs (not needed at runtime)
+# Docs and scratch outputs (not needed at runtime). JSON catalog data must ship.
 *.md
 !skills/**/*.md
+
+# Explicit: hybrid genre catalog (deep packs + catalog.json)
+!data/
+!data/genres/
+!data/genres/**
 
 # Git metadata (also excluded by agents-cli defaults)
 .git/

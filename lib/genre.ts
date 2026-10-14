@@ -1,6 +1,6 @@
 import {existsSync, readFileSync} from 'node:fs';
-import {dirname, join} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {join} from 'node:path';
+import {genreDataDir, skillsRootDir} from './repo-root.js';
 
 export type GenrePackSource = 'deep' | 'template' | 'generic';
 
@@ -29,29 +29,11 @@ export interface GenrePackResolution {
   warning?: string;
 }
 
-const dataRoot = join(dirname(fileURLToPath(import.meta.url)), '..', 'data', 'genres');
-
-/**
- * Resolve skills/ without importing lib/skills.ts (avoids circular imports
- * when skills.ts imports genre helpers).
- */
-function resolveSkillsRoot(): string {
-  const fromModule = join(
-    dirname(fileURLToPath(import.meta.url)),
-    '..',
-    'skills',
-  );
-  if (existsSync(fromModule)) {
-    return fromModule;
-  }
-  const fromCwd = join(process.cwd(), 'skills');
-  if (existsSync(fromCwd)) {
-    return fromCwd;
-  }
-  return fromModule;
+function dataRoot(): string {
+  return genreDataDir();
 }
 
-const skillsRoot = resolveSkillsRoot();
+const skillsRoot = skillsRootDir();
 
 function tryLoadSkillRel(relPath: string): string | null {
   const normalized = relPath.replace(/\\/g, '/').replace(/^\/+/, '');
@@ -66,14 +48,14 @@ function tryLoadSkillRel(relPath: string): string | null {
 }
 
 export function loadStyleFamilies(): Record<string, StyleFamily> {
-  return JSON.parse(readFileSync(join(dataRoot, 'families.json'), 'utf8')) as Record<
+  return JSON.parse(readFileSync(join(dataRoot(), 'families.json'), 'utf8')) as Record<
     string,
     StyleFamily
   >;
 }
 
 export function loadGenreCatalog(): CatalogEntry[] {
-  return JSON.parse(readFileSync(join(dataRoot, 'catalog.json'), 'utf8')) as CatalogEntry[];
+  return JSON.parse(readFileSync(join(dataRoot(), 'catalog.json'), 'utf8')) as CatalogEntry[];
 }
 
 export function expandFamilyTemplate(

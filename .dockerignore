@@ -1,0 +1,12 @@
+# Keep runtime assets (data/genres, skills/genres) in the image — do not exclude them.
+node_modules
+.git
+.cursor
+.vscode
+tests
+artifacts
+deployment
+*.md
+!skills/**/*.md
+.env
+.env.*
