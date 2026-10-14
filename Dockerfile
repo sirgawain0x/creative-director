@@ -16,6 +16,9 @@ FROM node:24-alpine
 
 WORKDIR /app
 
+# ADK bundles agent.ts into a temp file; asset paths resolve from cwd / this root.
+ENV CREATIVE_DIRECTOR_REPO_ROOT=/app
+
 ENV GOOGLE_GENAI_USE_VERTEXAI=1
 ENV GOOGLE_CLOUD_LOCATION=global
 # So ADK temp-bundle createRequire can resolve optional peers (MCP SDK).

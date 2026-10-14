@@ -18,6 +18,7 @@ import {
   createGrafanaMcpToolset,
   isGrafanaMcpConfigured,
 } from './lib/grafana-mcp.js';
+import {assertGenreCatalogAtStartup} from './lib/catalog-health.js';
 import {resolveGenrePack} from './lib/genre.js';
 import {creativeDirectorModel} from './lib/model.js';
 import {
@@ -33,6 +34,8 @@ import {confirmBatchRender} from './tools/confirm-batch-render.js';
 import {generateVideoCut} from './tools/generate-video-cut.js';
 import {quoteBatchRender} from './tools/quote-batch-render.js';
 import {signC2paManifest} from './tools/sign-c2pa-manifest.js';
+
+assertGenreCatalogAtStartup();
 
 /** `planning` (default) = research + storyboard only. `production` = also call mock render tools. */
 const agentMode =
