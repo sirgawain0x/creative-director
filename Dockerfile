@@ -23,6 +23,7 @@ ENV NODE_PATH=/app/node_modules
 
 # Agent Runtime telemetry (Cloud Trace + EVENT_ONLY prompt/response in logs)
 ENV GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true
+ENV OTEL_SERVICE_NAME=creative-director-ai
 ENV OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental
 ENV OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY
 

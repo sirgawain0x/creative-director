@@ -11,6 +11,7 @@ import {specialistAgentTool} from './agents/specialist-tool.js';
 import {writerAgent} from './agents/writer.js';
 import {
   createAgento11yBootstrap,
+  logAgento11yExporterWarning,
   setupGcpOtlpProvidersOnly,
 } from './lib/agento11y.js';
 import {isGcpOtlpTelemetryEnabled} from './lib/otel-gcp-otlp.js';
@@ -419,6 +420,7 @@ ${productionSwarmWorkflow(`STRICT RULES:
 export const rootAgent =
   agentMode === 'production' ? productionAgent : planningAgent;
 
+logAgento11yExporterWarning();
 const agento11yBootstrap = await createAgento11yBootstrap();
 if (!agento11yBootstrap && isGcpOtlpTelemetryEnabled()) {
   await setupGcpOtlpProvidersOnly();

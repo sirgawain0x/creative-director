@@ -56,6 +56,69 @@ const packageVersion = (() => {
 export const AGENTO11Y_AGENT_NAME = 'creative-director-ai';
 export const AGENTO11Y_AGENT_VERSION = packageVersion;
 
+export const DEFAULT_AGENTO11Y_ENDPOINT =
+  'https://agento11y-prod-us-east-0.grafana.net';
+export const DEFAULT_OTEL_EXPORTER_OTLP_ENDPOINT =
+  'https://otlp-gateway-prod-us-east-0.grafana.net/otlp';
+export const DEFAULT_AGENTO11Y_AUTH_TENANT_ID = '829818';
+
+/** Non-secret Agent Engine / local defaults (us-east-0 Grafana Cloud stack). */
+export function applyAgento11yDefaults(): void {
+  process.env.AGENTO11Y_ENDPOINT ??= DEFAULT_AGENTO11Y_ENDPOINT;
+  process.env.AGENTO11Y_PROTOCOL ??= 'http';
+  process.env.AGENTO11Y_AUTH_MODE ??= 'basic';
+  process.env.AGENTO11Y_AUTH_TENANT_ID ??= DEFAULT_AGENTO11Y_AUTH_TENANT_ID;
+  process.env.OTEL_EXPORTER_OTLP_ENDPOINT ??= DEFAULT_OTEL_EXPORTER_OTLP_ENDPOINT;
+  process.env.OTEL_EXPORTER_OTLP_PROTOCOL ??= 'http/protobuf';
+  process.env.OTEL_SERVICE_NAME ??= AGENTO11Y_AGENT_NAME;
+}
+
+applyAgento11yDefaults();
+
+export type Agento11yExporterGap =
+  | 'otel_endpoint'
+  | 'auth_token'
+  | 'otlp_headers';
+
+/** Missing pieces for Grafana OTLP export (never inspects secret values). */
+export function getAgento11yExporterGaps(): Agento11yExporterGap[] {
+  const gaps: Agento11yExporterGap[] = [];
+  if (!process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim()) {
+    gaps.push('otel_endpoint');
+  }
+  if (!process.env.AGENTO11Y_AUTH_TOKEN?.trim()) {
+    gaps.push('auth_token');
+  }
+  if (!process.env.OTEL_EXPORTER_OTLP_HEADERS?.trim()) {
+    gaps.push('otlp_headers');
+  }
+  return gaps;
+}
+
+/** Warn once at boot when Grafana OTLP export is incomplete. Never logs secrets. */
+export function logAgento11yExporterWarning(): void {
+  if (process.env.VITEST) {
+    return;
+  }
+  const gaps = getAgento11yExporterGaps();
+  if (gaps.length === 0) {
+    return;
+  }
+  const parts: string[] = [];
+  if (gaps.includes('otel_endpoint')) {
+    parts.push('OTEL_EXPORTER_OTLP_ENDPOINT is unset');
+  }
+  if (gaps.includes('auth_token') || gaps.includes('otlp_headers')) {
+    parts.push(
+      'AGENTO11Y_AUTH_TOKEN and/or OTEL_EXPORTER_OTLP_HEADERS are unset (use Secret Manager refs on Agent Engine)',
+    );
+  }
+  console.warn(
+    `[agento11y] Grafana OpenTelemetry export is not configured: ${parts.join('; ')}. ` +
+      'Agent Observability ingest and OTLP traces/metrics stay disabled until env and secrets are wired.',
+  );
+}
+
 type AdkPluginLike = {
   name: string;
   onUserMessageCallback?: (params: unknown) => Promise<unknown>;
