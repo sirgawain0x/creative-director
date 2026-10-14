@@ -2,6 +2,9 @@
 # Deploy Creative Director to Vertex Agent Engine (us-east1).
 # Requires: agents-cli, gcloud ADC, human approval.
 #
+# Production traffic for Creative Pixels uses Cloud Run service `creative-director`
+# (see scripts/deploy-cloudrun.sh). This script targets Agent Engine when used.
+#
 # Optional — headless assembly auth (Agent Runtime env, NOT Vercel):
 #   export PIXELS_HEADLESS_API_KEY='<same value as Cloud Run PIXELS_API_KEY>'
 #   npm run deploy
@@ -16,17 +19,9 @@
 
 set -euo pipefail
 
-AGENTO11Y_ENDPOINT="${AGENTO11Y_ENDPOINT:-https://agento11y-prod-us-east-0.grafana.net}"
-AGENTO11Y_PROTOCOL="${AGENTO11Y_PROTOCOL:-http}"
-AGENTO11Y_AUTH_MODE="${AGENTO11Y_AUTH_MODE:-basic}"
-AGENTO11Y_AUTH_TENANT_ID="${AGENTO11Y_AUTH_TENANT_ID:-829818}"
-OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otlp-gateway-prod-us-east-0.grafana.net/otlp}"
-OTEL_EXPORTER_OTLP_PROTOCOL="${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}"
-OTEL_SERVICE_NAME="${OTEL_SERVICE_NAME:-creative-director-ai}"
-
-AGENTO11Y_AUTH_TOKEN_SECRET="${AGENTO11Y_AUTH_TOKEN_SECRET:-creative-director-agento11y-auth-token}"
-OTEL_EXPORTER_OTLP_HEADERS_SECRET="${OTEL_EXPORTER_OTLP_HEADERS_SECRET:-creative-director-otel-otlp-headers}"
-AGENTO11Y_SECRET_VERSION="${AGENTO11Y_SECRET_VERSION:-latest}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/lib/agento11y-deploy-env.sh
+source "${ROOT}/scripts/lib/agento11y-deploy-env.sh"
 
 BASE_VARS=(
   "CREATIVE_DIRECTOR_MODE=production"
@@ -34,13 +29,7 @@ BASE_VARS=(
   "RENDERS_GCS_BUCKET=creative-ai-491118-creative-pixels-renders"
   "VERTEX_LOCATION=us-central1"
   "PIXELS_HEADLESS_URL=https://pixels-headless-3ortoh2aiq-uc.a.run.app"
-  "AGENTO11Y_ENDPOINT=${AGENTO11Y_ENDPOINT}"
-  "AGENTO11Y_PROTOCOL=${AGENTO11Y_PROTOCOL}"
-  "AGENTO11Y_AUTH_MODE=${AGENTO11Y_AUTH_MODE}"
-  "AGENTO11Y_AUTH_TENANT_ID=${AGENTO11Y_AUTH_TENANT_ID}"
-  "OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}"
-  "OTEL_EXPORTER_OTLP_PROTOCOL=${OTEL_EXPORTER_OTLP_PROTOCOL}"
-  "OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME}"
+  "${agento11y_plain_env_vars[@]}"
 )
 
 if [[ -n "${PIXELS_HEADLESS_API_KEY:-}" ]]; then
@@ -50,14 +39,8 @@ else
   echo "deploy: PIXELS_HEADLESS_API_KEY not set in shell — skipping (existing engine env unchanged if already set)"
 fi
 
-SECRET_PAIRS=(
-  "AGENTO11Y_AUTH_TOKEN=${AGENTO11Y_AUTH_TOKEN_SECRET}:${AGENTO11Y_SECRET_VERSION}"
-  "OTEL_EXPORTER_OTLP_HEADERS=${OTEL_EXPORTER_OTLP_HEADERS_SECRET}:${AGENTO11Y_SECRET_VERSION}"
-)
-
-IFS=,
-ENV_CSV="${BASE_VARS[*]}"
-SECRET_CSV="${SECRET_PAIRS[*]}"
+ENV_CSV="$(agento11y_join_csv "${BASE_VARS[@]}")"
+SECRET_CSV="$(agento11y_join_csv "${agento11y_secret_vars[@]}")"
 
 echo "deploy: Agent Observability plain env → ${#BASE_VARS[@]} keys (no secret values)"
 echo "deploy: Secret Manager refs → AGENTO11Y_AUTH_TOKEN=${AGENTO11Y_AUTH_TOKEN_SECRET}:${AGENTO11Y_SECRET_VERSION}, OTEL_EXPORTER_OTLP_HEADERS=${OTEL_EXPORTER_OTLP_HEADERS_SECRET}:${AGENTO11Y_SECRET_VERSION}"

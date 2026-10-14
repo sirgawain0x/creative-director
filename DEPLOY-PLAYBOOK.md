@@ -30,7 +30,8 @@ Vertex AI Reasoning Engine / Agent Runtime   (THIS repo)
 
 | Component | Repo / path | Role |
 |-----------|-------------|------|
-| **Creative Director agent** | `g2-1/creative-director` (this repo) | ADK TypeScript swarm; deployed via `agents-cli` to **Vertex Agent Engine** |
+| **Creative Director agent (prod)** | `g2-1/creative-director` (this repo) | ADK TypeScript swarm on **Cloud Run** service `creative-director` (`us-east1`); Vercel `DIRECTOR_ADK_BASE_URL` points here |
+| **Creative Director (Agent Engine)** | same repo, optional | `npm run deploy` → `agents-cli` Reasoning Engine (legacy/alternate) |
 | **Pixels `/api/director` proxy** | `g2-1/edit-pixels` → `api/director.ts` | Vercel SSE proxy + WIF auth to Agent Engine |
 | **Pixels headless render** | `g2-1/edit-pixels` → `headless/deploy-cloudrun.sh` | Cloud Run video assembly/C2PA — called **by the agent** in production mode |
 | **Firestore `creative-director-1`** | Pixels / edit-pixels | Sessions, storyboards, billing audit — **not** the agent runtime |
@@ -149,7 +150,17 @@ Hosted Grafana MCP needs self-hosted MCP + token on Agent Runtime (see `scripts/
 - [ ] `gcloud config set project creative-ai-491118`
 - [ ] `uv tool install google-agents-cli` (or upgrade to match `agents-cli-manifest.yaml` `acli_version`)
 
-### Phase B — Deploy Agent Engine
+### Phase B — Deploy production Cloud Run (Creative Pixels traffic)
+
+```bash
+cd creative-director
+# Human approval required — updates env/secrets only (no image rebuild):
+npm run deploy:cloudrun
+```
+
+`scripts/deploy-cloudrun.sh` runs `gcloud run services update creative-director` with `--update-env-vars` / `--update-secrets` (non-destructive; see [Cloud Run env vars](https://cloud.google.com/run/docs/configuring/services/environment-variables) and [secrets](https://cloud.google.com/run/docs/configuring/services/secrets)). Runtime SA needs `roles/secretmanager.secretAccessor`.
+
+### Phase B2 — Deploy Agent Engine (optional)
 
 ```bash
 cd creative-director
