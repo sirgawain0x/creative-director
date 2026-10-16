@@ -18,6 +18,7 @@
     "adk:proxy": "node scripts/adk-camel-proxy.mjs",
     "grafana:verify": "node scripts/verify-grafana-mcp.mjs",
     "deploy": "bash scripts/deploy.sh",
+    "deploy:cloudrun": "bash scripts/deploy-cloudrun.sh",
     "eval": "agents-cli eval run --dataset tests/eval/datasets/basic-dataset.json --config tests/eval/eval_config.yaml --url http://127.0.0.1:8766 --app-name agent --concurrency 1"
   },
   "dependencies": {

@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$ROOT/.env"
 TENANT_ID="${AGENTO11Y_AUTH_TENANT_ID:-829818}"
 ENDPOINT="${AGENTO11Y_ENDPOINT:-https://agento11y-prod-us-east-0.grafana.net}"
-OTEL_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otlp-gateway-prod-us-east-2.grafana.net/otlp}"
+OTEL_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otlp-gateway-prod-us-east-0.grafana.net/otlp}"
 
 if [[ -t 0 ]]; then
   read -r -s -p "Paste glc_ token (input hidden): " TOKEN

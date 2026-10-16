@@ -84,6 +84,36 @@ resource "google_vertex_ai_reasoning_engine" "app" {
       }
 
       env {
+        name  = "AGENTO11Y_ENDPOINT"
+        value = "https://agento11y-prod-us-east-0.grafana.net"
+      }
+
+      env {
+        name  = "AGENTO11Y_PROTOCOL"
+        value = "http"
+      }
+
+      env {
+        name  = "AGENTO11Y_AUTH_MODE"
+        value = "basic"
+      }
+
+      env {
+        name  = "AGENTO11Y_AUTH_TENANT_ID"
+        value = var.agento11y_auth_tenant_id
+      }
+
+      env {
+        name  = "OTEL_EXPORTER_OTLP_ENDPOINT"
+        value = "https://otlp-gateway-prod-us-east-0.grafana.net/otlp"
+      }
+
+      env {
+        name  = "OTEL_EXPORTER_OTLP_PROTOCOL"
+        value = "http/protobuf"
+      }
+
+      env {
         name  = "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"
         value = "EVENT_ONLY"
       }
@@ -116,6 +146,22 @@ resource "google_vertex_ai_reasoning_engine" "app" {
       env {
         name  = "GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY"
         value = "true"
+      }
+
+      secret_env {
+        name = "AGENTO11Y_AUTH_TOKEN"
+        secret_ref {
+          secret  = var.agento11y_auth_token_secret_id
+          version = var.agent_engine_secret_version
+        }
+      }
+
+      secret_env {
+        name = "OTEL_EXPORTER_OTLP_HEADERS"
+        secret_ref {
+          secret  = var.otel_exporter_otlp_headers_secret_id
+          version = var.agent_engine_secret_version
+        }
       }
 
       # Production render pipeline (Phase 1). Redeploy via agents-cli after

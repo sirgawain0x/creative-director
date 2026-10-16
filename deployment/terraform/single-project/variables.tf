@@ -95,3 +95,27 @@ variable "pixels_headless_api_key" {
   default     = ""
   sensitive   = true
 }
+
+variable "agento11y_auth_tenant_id" {
+  type        = string
+  description = "Grafana Cloud stack ID for Agent Observability basic auth (non-secret)."
+  default     = "829818"
+}
+
+variable "agento11y_auth_token_secret_id" {
+  type        = string
+  description = "Secret Manager secret id (not full resource name) for AGENTO11Y_AUTH_TOKEN."
+  default     = "creative-director-agento11y-auth-token"
+}
+
+variable "otel_exporter_otlp_headers_secret_id" {
+  type        = string
+  description = "Secret Manager secret id for OTEL_EXPORTER_OTLP_HEADERS."
+  default     = "creative-director-otel-otlp-headers"
+}
+
+variable "agent_engine_secret_version" {
+  type        = string
+  description = "Secret Manager version for agento11y / OTLP header secrets (e.g. latest or numeric)."
+  default     = "latest"
+}
