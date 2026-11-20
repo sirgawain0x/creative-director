@@ -1,6 +1,6 @@
 # Creative Director AI (Google ADK TypeScript)
 
-Autonomous AI Music Video Director built with the **Agent Development Kit (ADK)** on TypeScript, using `gemini-3.5-flash` via Agent Platform / Vertex AI.
+Autonomous AI Music Video Director built with the **Agent Development Kit (ADK)** on TypeScript, using `gemini-3.8-flash` via Agent Platform / Vertex AI.
 
 <img width="1706" height="391" alt="Screenshot 2026-08-31 at 8 43 47 PM" src="https://github.com/user-attachments/assets/8c6f4f6f-8734-4857-8031-3e1a5c2940ae" />
 

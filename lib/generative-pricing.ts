@@ -5,6 +5,43 @@
 export type VeoTier = 'standard' | 'fast' | 'lite';
 export type VeoQuality = '720p' | '1080p' | '4K';
 
+export const GEMINI_OMNI_MODEL = 'gemini-omni-1.2-flash';
+export const OMNI_MIN_DURATION_SEC = 3;
+export const OMNI_MAX_DURATION_SEC = 15;
+export type OmniQuality = '360p' | '720p' | '1080p' | '4K';
+
+const OMNI_USD_PER_SEC: Record<OmniQuality, number> = {
+  '360p': 0.023,
+  '720p': 0.07,
+  '1080p': 0.104,
+  '4K': 0.209,
+};
+
+export function clampOmniDuration(seconds: number): number {
+  if (!Number.isFinite(seconds)) return 8;
+  return Math.min(
+    OMNI_MAX_DURATION_SEC,
+    Math.max(OMNI_MIN_DURATION_SEC, Math.round(seconds)),
+  );
+}
+
+export function normalizeOmniQuality(quality: string): OmniQuality {
+  if (quality === '360p') return '360p';
+  if (quality === '1080p') return '1080p';
+  if (quality === '4k' || quality === '4K') return '4K';
+  return '720p';
+}
+
+export function quoteOmniCredits(params: {
+  duration: number;
+  quality?: string;
+}): number {
+  const duration = clampOmniDuration(params.duration);
+  const quality = normalizeOmniQuality(params.quality ?? '720p');
+  const usd = duration * OMNI_USD_PER_SEC[quality];
+  return Math.max(1, Math.ceil(usd / 0.1));
+}
+
 export const FLOW_ALLOWED_DURATIONS = [4, 6, 8] as const;
 export type FlowDurationSec = (typeof FLOW_ALLOWED_DURATIONS)[number];
 

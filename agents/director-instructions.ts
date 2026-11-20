@@ -4,8 +4,14 @@ export const SWARM_PACKAGE_SHAPE = `Deliverable package fields (text is fine; ke
 - genre: catalogGenre from select_genre_pack (also note packId + source; include warning if present)
 - treatment: from writer_agent
 - storyboard: scenes with scene_index, timestamp_start, timestamp_end, camera_movement, lighting, visual_prompt
-- batch_quote: from quote_batch_render (batch_quote_id, per-shot provider, estimated CRTVAI) — after storyboard approval
+- batch_quote: from quote_batch_render (batch_quote_id, per-shot provider [omni/veo/seedance], estimated CRTVAI) — after storyboard approval
 - clip_urls / master_url: only after confirm_batch_render or real tool results — never invent them`;
+
+export const ANTI_HALLUCINATION_RULES = `TRUTHFULNESS & ANTI-HALLUCINATION RULES (MANDATORY):
+- If ANY tool call fails, throws an error, or returns status: 'error', status: 'rejected', or empty clip_urls: STOP the pipeline immediately. Do NOT proceed to assemble_and_sync_timeline or sign_c2pa_manifest, and do NOT claim "Production Cycle Complete" or that assembly or signing succeeded.
+- Report the exact tool failure honestly and state clearly which step failed and what remains incomplete.
+- NEVER invent, guess, or reconstruct URLs, URIs, hashes, or DIDs — specifically NEVER fabricate gcs://... URIs, https://gcs.pixels.online/..., pixels-assets paths, or synthetic did:key:... identifiers.
+- ONLY share URLs returned verbatim by successful tool calls in this session.`;
 
 /** Grafana Cloud MCP tools are prefixed with grafana_ when enabled. */
 export const GRAFANA_OBSERVABILITY_RULES = `Grafana Cloud MCP (tools prefixed grafana_):
@@ -33,6 +39,8 @@ Workflow:
 
 ${SWARM_PACKAGE_SHAPE}
 
+${ANTI_HALLUCINATION_RULES}
+
 STRICT RULES:
 - Do NOT claim that video was rendered, assembled, uploaded, or C2PA-signed.
 - Do NOT invent download links or GCS URLs.
@@ -58,12 +66,14 @@ Workflow:
 3. When calling dp_agent, paste the same pack markdown, treatment, BPM, and genre ids.
 4. Delegate research to search_specialist / url_specialist when needed.
 5. HITL: Unless this turn already contains explicit render approval ("render", "approved", "go ahead"), STOP and present the storyboard. Do not call quote_batch_render yet.
-6. After storyboard approval, call quote_batch_render with all scenes (map dp_agent visual_prompt + camera_movement). Present batch_quote_id and per-shot CRTVAI totals. Never auto-spend.
+6. After storyboard approval, call quote_batch_render with all scenes (map dp_agent visual_prompt + camera_movement; quote_batch_render supports omni [Gemini Omni 1.2 Flash, cost-effective], veo, and seedance). Present batch_quote_id and per-shot CRTVAI totals. Never auto-spend.
 7. After explicit batch quote confirmation ("confirm", "approved", "go ahead" on the quote), call confirm_batch_render with user_confirmed: true and batch_quote_id.
-8. Delegate clip order and assembly args to editor_agent (pass clip_urls only from confirm_batch_render jobs — never invent URLs).
-9. When clips exist, call assemble_and_sync_timeline then sign_c2pa_manifest using editor_agent arguments.${grafanaStep}
+8. Delegate clip order and assembly args to editor_agent ONLY when confirm_batch_render or generate_video_cut returned real clip_urls (never invent URLs).
+9. When real clips exist, call assemble_and_sync_timeline then sign_c2pa_manifest using editor_agent arguments.${grafanaStep}
 
 ${SWARM_PACKAGE_SHAPE}
+
+${ANTI_HALLUCINATION_RULES}
 
 ${extraToolNotes}${grafanaBlock}
 

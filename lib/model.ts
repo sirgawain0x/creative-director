@@ -23,7 +23,7 @@ export function createCreativeDirectorModel(): Gemini {
 
   if (useVertex) {
     return new Gemini({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-3.8-flash',
       vertexai: true,
       project: process.env.GOOGLE_CLOUD_PROJECT,
       location: 'global',
@@ -31,7 +31,7 @@ export function createCreativeDirectorModel(): Gemini {
   }
 
   return new Gemini({
-    model: 'gemini-3.5-flash',
+    model: 'gemini-3.8-flash',
     apiKey,
     location: 'global',
   });

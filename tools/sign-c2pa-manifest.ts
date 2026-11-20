@@ -4,6 +4,10 @@
  */
 
 import {resolveReadableMediaUrl, uploadVideoToGcs} from '../lib/gcs.js';
+import {
+  assertValidMediaUrl,
+  assertValidMediaUrls,
+} from '../lib/media-url-validation.js';
 import {embedC2paOnHeadless} from '../lib/pixels-headless-client.js';
 import {writeProvenanceSidecars} from '../lib/provenance.js';
 import {isC2paEmbedConfigured} from '../lib/render-config.js';
@@ -40,21 +44,38 @@ export interface SignC2paManifestResult {
 export async function signC2paManifest(
   input: SignC2paManifestInput,
 ): Promise<SignC2paManifestResult> {
-  const written = await writeProvenanceSidecars(input);
+  const validMasterUrl = assertValidMediaUrl(
+    input.master_video_url,
+    'master_video_url',
+  );
+  if (!input.creator_did?.trim()) {
+    throw new Error('sign_c2pa_manifest requires a non-empty creator_did');
+  }
+  const validClipUrls = input.clip_urls?.length
+    ? assertValidMediaUrls(input.clip_urls, 'clip_urls')
+    : undefined;
+  const validatedInput: SignC2paManifestInput = {
+    ...input,
+    master_video_url: validMasterUrl,
+    creator_did: input.creator_did.trim(),
+    clip_urls: validClipUrls,
+  };
+
+  const written = await writeProvenanceSidecars(validatedInput);
 
   const baseResult = {
     mock: false as const,
-    unsigned_master_url: input.master_video_url,
+    unsigned_master_url: validMasterUrl,
     provenance_manifest_url: written.provenance_manifest_url,
     ingredients_url: written.ingredients_url,
     status_url: written.status_url,
     session_id: written.session_id,
     issuer: written.manifest.creator_did,
     manifest_summary: {
-      engine: input.ai_models_used,
+      engine: validatedInput.ai_models_used,
       provenance_standard: written.manifest.provenance_standard,
       timestamp: written.manifest.created_at,
-      clip_count: input.clip_urls?.length ?? 0,
+      clip_count: validClipUrls?.length ?? 0,
     },
   };
 
@@ -67,8 +88,8 @@ export async function signC2paManifest(
     };
   }
 
-  const readableMaster = await resolveReadableMediaUrl(input.master_video_url);
-  const clipUrls = input.clip_urls ?? [];
+  const readableMaster = await resolveReadableMediaUrl(validMasterUrl);
+  const clipUrls = validClipUrls ?? [];
   const ingredients = await Promise.all(
     clipUrls.map(async (url, index) => ({
       title: `scene_${index + 1}`,
@@ -78,7 +99,7 @@ export async function signC2paManifest(
 
   const embedded = await embedC2paOnHeadless({
     masterUrl: readableMaster,
-    creatorDid: input.creator_did,
+    creatorDid: validatedInput.creator_did,
     ingredients,
   });
 

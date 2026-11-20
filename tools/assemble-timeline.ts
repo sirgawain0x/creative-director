@@ -5,6 +5,10 @@
 
 import {resolveReadableMediaUrl, uploadVideoToGcs} from '../lib/gcs.js';
 import {
+  assertValidMediaUrl,
+  assertValidMediaUrls,
+} from '../lib/media-url-validation.js';
+import {
   createHeadlessProject,
   editHeadlessProject,
   importMediaFromUrl,
@@ -107,6 +111,9 @@ export async function assembleAndSyncTimeline(
     throw new Error('assemble_and_sync_timeline requires at least one clip URL');
   }
 
+  const validClipUrls = assertValidMediaUrls(clip_urls, 'clip_urls');
+  const validAudioUri = assertValidMediaUrl(audio_uri, 'audio_uri');
+
   const projectId = slugifyProjectId(project_title);
   const fps = DEFAULT_FPS;
 
@@ -117,8 +124,8 @@ export async function assembleAndSyncTimeline(
   });
 
   const clipMedia: MediaResource[] = [];
-  for (let index = 0; index < clip_urls.length; index++) {
-    const downloadUrl = await resolveReadableMediaUrl(clip_urls[index]!);
+  for (let index = 0; index < validClipUrls.length; index++) {
+    const downloadUrl = await resolveReadableMediaUrl(validClipUrls[index]!);
     const imported = await importMediaFromUrl({
       url: downloadUrl,
       id: `clip_${index}`,
@@ -127,7 +134,7 @@ export async function assembleAndSyncTimeline(
     clipMedia.push(imported);
   }
 
-  const audioDownloadUrl = await resolveReadableMediaUrl(audio_uri);
+  const audioDownloadUrl = await resolveReadableMediaUrl(validAudioUri);
   const audioMedia = await importMediaFromUrl({
     url: audioDownloadUrl,
     id: 'audio_master',

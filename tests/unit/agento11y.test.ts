@@ -1,5 +1,7 @@
+import {BaseTool, Context, PluginManager} from '@google/adk';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {
+  Agento11yAdkPluginAdapter,
   DEFAULT_OTEL_EXPORTER_OTLP_ENDPOINT,
   applyAgento11yDefaults,
   getAgento11yExporterGaps,
@@ -93,5 +95,140 @@ describe('isAgento11yConfigured', () => {
     );
     vi.stubEnv('OTEL_EXPORTER_OTLP_HEADERS', 'Authorization=Basic dGVzdA==');
     expect(isAgento11yConfigured()).toBe(true);
+  });
+});
+
+describe('Agento11yAdkPluginAdapter', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('swallows echoed tool error rethrown by agento11y without warning', async () => {
+    const toolError = new Error(
+      "Error in tool 'assemble_and_sync_timeline': Missing or invalid Authorization Bearer token",
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const adapter = new Agento11yAdkPluginAdapter({
+      name: 'agento11y_google_adk_plugin',
+      onToolErrorCallback: async (params) => {
+        throw (params as {error: Error}).error;
+      },
+    });
+
+    await expect(
+      adapter.onToolErrorCallback({
+        tool: {name: 'assemble_and_sync_timeline'},
+        toolArgs: {},
+        toolContext: {},
+        error: toolError,
+      }),
+    ).resolves.toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('warns and resolves undefined when onToolErrorCallback throws an unrelated plugin error', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const adapter = new Agento11yAdkPluginAdapter({
+      name: 'agento11y_google_adk_plugin',
+      onToolErrorCallback: async () => {
+        throw new Error('OTLP span exporter failure');
+      },
+    });
+
+    await expect(
+      adapter.onToolErrorCallback({
+        tool: {name: 'assemble_and_sync_timeline'},
+        toolArgs: {},
+        toolContext: {},
+        error: new Error('original tool failure'),
+      }),
+    ).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0]?.[0])).toContain(
+      '[agento11y] onToolErrorCallback failed:',
+    );
+    expect(String(warn.mock.calls[0]?.[1])).toContain(
+      'OTLP span exporter failure',
+    );
+  });
+
+  it('catches errors from onModelErrorCallback, beforeToolCallback, and afterToolCallback', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const modelError = new Error('vertex 503');
+    const adapter = new Agento11yAdkPluginAdapter({
+      name: 'agento11y_google_adk_plugin',
+      onModelErrorCallback: async (params) => {
+        throw (params as {error: Error}).error;
+      },
+      beforeToolCallback: async () => {
+        throw new Error('beforeTool boom');
+      },
+      afterToolCallback: async () => {
+        throw new Error('afterTool boom');
+      },
+    });
+
+    await expect(
+      adapter.onModelErrorCallback({
+        callbackContext: {},
+        llmRequest: {},
+        error: modelError,
+      }),
+    ).resolves.toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
+
+    const unrelatedAdapter = new Agento11yAdkPluginAdapter({
+      name: 'agento11y_google_adk_plugin',
+      onModelErrorCallback: async () => {
+        throw new Error('model telemetry boom');
+      },
+    });
+    await expect(
+      unrelatedAdapter.onModelErrorCallback({
+        callbackContext: {},
+        llmRequest: {},
+        error: modelError,
+      }),
+    ).resolves.toBeUndefined();
+
+    await expect(
+      adapter.beforeToolCallback({
+        tool: {name: 't'},
+        toolArgs: {},
+        toolContext: {},
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      adapter.afterToolCallback({
+        tool: {name: 't'},
+        toolArgs: {},
+        toolContext: {},
+        result: {},
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(warn).toHaveBeenCalledTimes(3);
+  });
+
+  it('lets ADK PluginManager.runOnToolErrorCallback resolve cleanly when inner throws', async () => {
+    const toolError = new Error(
+      "Error in tool 'sign_c2pa_manifest': Missing or invalid Authorization Bearer token",
+    );
+    const adapter = new Agento11yAdkPluginAdapter({
+      name: 'agento11y_google_adk_plugin',
+      onToolErrorCallback: async (params) => {
+        throw (params as {error: Error}).error;
+      },
+    });
+    const pluginManager = new PluginManager([adapter]);
+
+    await expect(
+      pluginManager.runOnToolErrorCallback({
+        tool: {name: 'sign_c2pa_manifest'} as unknown as BaseTool,
+        toolArgs: {},
+        toolContext: {} as unknown as Context,
+        error: toolError,
+      }),
+    ).resolves.toBeUndefined();
   });
 });

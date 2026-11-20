@@ -103,7 +103,7 @@ const researchTools = [
 const quoteBatchRenderTool = new FunctionTool({
   name: 'quote_batch_render',
   description:
-    'After storyboard approval, price all shots via Pixels Generate (Veo or Seedance per shot). Returns batch_quote_id and per-shot CRTVAI estimates. Does NOT spend or render.',
+    'After storyboard approval, price all shots via Pixels Generate (Gemini Omni 1.2 Flash, Veo, or Seedance per shot). Returns batch_quote_id and per-shot CRTVAI estimates. Does NOT spend or render.',
   parameters: z.object({
     shots: z
       .array(
@@ -120,9 +120,9 @@ const quoteBatchRenderTool = new FunctionTool({
       )
       .min(1),
     preferred_provider: z
-      .enum(['veo', 'seedance'])
+      .enum(['omni', 'veo', 'seedance'])
       .optional()
-      .describe('User provider preference when set'),
+      .describe('User provider preference when set (omni = Gemini Omni 1.2 Flash cost-effective option)'),
     consistent_character: z
       .boolean()
       .optional()
@@ -140,7 +140,7 @@ const quoteBatchRenderTool = new FunctionTool({
 const confirmBatchRenderTool = new FunctionTool({
   name: 'confirm_batch_render',
   description:
-    'After explicit user confirmation of a batch quote, start Pixels Generate jobs (Veo or Seedance). Returns job request_ids — never fake clip URLs.',
+    'After explicit user confirmation of a batch quote, start Pixels Generate jobs (Gemini Omni 1.2 Flash, Veo, or Seedance). Returns job request_ids — never fake clip URLs.',
   parameters: z.object({
     batch_quote_id: z.string(),
     user_confirmed: z
@@ -252,7 +252,7 @@ const signC2paTool = new FunctionTool({
     ai_models_used: z
       .string()
       .describe(
-        'List of generative AI models used (e.g. Gemini 3.5 Flash, Google Veo)',
+        'List of generative AI models used (e.g. Gemini 3.8 Flash, Gemini Omni 1.2 Flash, Google Veo)',
       ),
     clip_urls: z
       .array(z.string())
@@ -330,7 +330,7 @@ const MOCK_PIPELINE_RULES = `- Every tool result with mock: true is a SIMULATION
 
 function batchQuoteNote(): string {
   if (pixelsGenerateEnabled) {
-    return `'quote_batch_render' prices all storyboard shots (Veo or Seedance) and returns batch_quote_id — no CRTVAI spend.
+    return `'quote_batch_render' prices all storyboard shots (Gemini Omni 1.2 Flash, Veo, or Seedance) and returns batch_quote_id — no CRTVAI spend.
 'confirm_batch_render' starts real Pixels Generate jobs only after explicit user_confirmed: true.
 Never invent clip URLs; only share output_video_url from confirm_batch_render jobs when present.`;
   }
@@ -344,7 +344,7 @@ const productionAgent = new LlmAgent({
   name: 'Creative_Director_AI',
   description: productionRenderEnabled
     ? pixelsGenerateEnabled
-      ? 'Production-mode Creative Director: swarm + Pixels Generate batch quote/confirm (Veo or Seedance).'
+      ? 'Production-mode Creative Director: swarm + Pixels Generate batch quote/confirm (Gemini Omni 1.2 Flash, Veo, or Seedance).'
       : headlessAssemblyEnabled
         ? provenanceEnabled
           ? c2paEmbedEnabled

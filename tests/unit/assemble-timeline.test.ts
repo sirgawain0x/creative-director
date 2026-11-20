@@ -77,4 +77,33 @@ describe('assembleAndSyncTimeline', () => {
     expect(mockRenderProject).toHaveBeenCalledOnce();
     expect(mockUpload).toHaveBeenCalledOnce();
   });
+
+  it('rejects hallucinated gcs:// and placeholder URLs before headless calls', async () => {
+    await expect(
+      assembleAndSyncTimeline({
+        project_title: 'Hallucinated Clips',
+        clip_urls: ['gcs://pixels-assets/renders/shot1.mp4'],
+        audio_uri: 'https://storage.googleapis.com/bucket/audio.mp3',
+      }),
+    ).rejects.toThrow(/gcs:\/\//i);
+
+    await expect(
+      assembleAndSyncTimeline({
+        project_title: 'Hallucinated Domain',
+        clip_urls: ['https://gcs.pixels.online/renders/shot1.mp4'],
+        audio_uri: 'https://storage.googleapis.com/bucket/audio.mp3',
+      }),
+    ).rejects.toThrow(/placeholder domain/i);
+
+    await expect(
+      assembleAndSyncTimeline({
+        project_title: 'Bad Audio',
+        clip_urls: ['https://storage.googleapis.com/bucket/cuts/scene_1.mp4'],
+        audio_uri: 'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
+      }),
+    ).rejects.toThrow(/audio_uri/i);
+
+    expect(mockCreateProject).not.toHaveBeenCalled();
+    expect(mockImportMedia).not.toHaveBeenCalled();
+  });
 });

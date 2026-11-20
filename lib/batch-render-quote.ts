@@ -5,8 +5,10 @@
 import {randomUUID} from 'node:crypto';
 import {
   clampFlowDuration,
+  clampOmniDuration,
   quoteFlowCreditsUsdc6,
   quoteFlowTotalCredits,
+  quoteOmniCredits,
   type VeoTier,
 } from './generative-pricing.js';
 import {
@@ -18,7 +20,7 @@ import {
 } from './seedance-pricing.js';
 import type {StoryboardScene} from './production-package.js';
 
-export type GenerateProvider = 'veo' | 'seedance';
+export type GenerateProvider = 'omni' | 'veo' | 'seedance';
 
 export interface BatchShotInput {
   scene_index: number;
@@ -47,6 +49,11 @@ export interface BatchShotQuote {
   seedance_quote_id?: string;
   provider_label: string;
   /** Per-provider pricing from Pixels batch-quote (when remote). */
+  omni_quote?: {
+    crtvai_required: string;
+    formatted_usd: string;
+    estimated_usdc6?: number;
+  };
   veo_quote?: {crtvai_required: string; formatted_usd: string; estimated_usdc6?: number};
   seedance_quote?: {
     crtvai_required: string;
@@ -73,6 +80,7 @@ export interface BatchRenderQuote {
   expires_at?: string;
   remote_quote?: boolean;
   totals?: {
+    all_omni?: {crtvai_required: string; formatted_usd: string};
     all_veo: {crtvai_required: string; formatted_usd: string};
     all_seedance: {crtvai_required: string; formatted_usd: string};
     recommended_mix: {
@@ -133,10 +141,35 @@ export function selectProvider(input: {
   consistent_character?: boolean;
   preferred_provider?: GenerateProvider;
 }): GenerateProvider {
-  if (input.preferred_provider === 'veo' || input.preferred_provider === 'seedance') {
+  if (
+    input.preferred_provider === 'omni' ||
+    input.preferred_provider === 'veo' ||
+    input.preferred_provider === 'seedance'
+  ) {
     return input.preferred_provider;
   }
   return input.consistent_character ? 'seedance' : 'veo';
+}
+
+function quoteOmniShot(durationSeconds: number): {
+  estimated_usdc6: number;
+  crtvai_required: string;
+  duration_seconds: number;
+} {
+  const duration = clampOmniDuration(durationSeconds);
+  const credits = quoteOmniCredits({
+    duration,
+    quality: PIXELS_VEO_QUALITY,
+  });
+  const quote = quoteFlowCreditsUsdc6(credits);
+  if (!quote) {
+    throw new Error('Unable to quote Gemini Omni shot');
+  }
+  return {
+    estimated_usdc6: quote.estimatedUsdc6,
+    crtvai_required: quote.minCrtvaiWei.toString(),
+    duration_seconds: duration,
+  };
 }
 
 function quoteVeoShot(durationSeconds: number): {
@@ -205,6 +238,25 @@ export function mapStoryboardSceneToShot(
   const aspectRatio = options.aspect_ratio ?? '16:9';
   const resolution = options.resolution ?? '720p';
   const prompt = buildShotPrompt(scene.visual_prompt, scene.camera_movement);
+
+  if (provider === 'omni') {
+    const omni = quoteOmniShot(durationSeconds);
+    return {
+      scene_index: scene.scene_index,
+      shot_id: shotIdForScene(scene.scene_index),
+      timestamp_start: scene.timestamp_start,
+      timestamp_end: scene.timestamp_end,
+      provider: 'omni',
+      prompt,
+      duration_seconds: omni.duration_seconds,
+      aspect_ratio: aspectRatio,
+      resolution,
+      estimated_usdc6: omni.estimated_usdc6,
+      crtvai_required: omni.crtvai_required,
+      formatted_usd: formatUsd(omni.estimated_usdc6),
+      provider_label: 'Gemini Omni 1.2 Flash',
+    };
+  }
 
   if (provider === 'seedance') {
     const seedance = quoteSeedanceShot(durationSeconds, resolution);

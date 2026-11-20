@@ -11,12 +11,33 @@ describe('batch-render-quote', () => {
     resetBatchQuoteStore();
   });
 
-  it('selects Seedance when consistent_character is true', () => {
+  it('selects Seedance when consistent_character is true unless preferred_provider overrides', () => {
     expect(selectProvider({consistent_character: true})).toBe('seedance');
     expect(selectProvider({consistent_character: false})).toBe('veo');
     expect(selectProvider({preferred_provider: 'veo', consistent_character: true})).toBe(
       'veo',
     );
+    expect(selectProvider({preferred_provider: 'omni', consistent_character: true})).toBe(
+      'omni',
+    );
+  });
+
+  it('quotes Gemini Omni 1.2 Flash cheaper than Veo Standard', () => {
+    const scene = {
+      scene_index: 1,
+      timestamp_start: '00:00',
+      timestamp_end: '00:10',
+      camera_movement: 'tracking',
+      lighting: 'neon',
+      visual_prompt: 'Runner on wet asphalt',
+    };
+    const omniShot = mapStoryboardSceneToShot(scene, {preferred_provider: 'omni'});
+    const veoShot = mapStoryboardSceneToShot(scene, {preferred_provider: 'veo'});
+
+    expect(omniShot.provider).toBe('omni');
+    expect(omniShot.provider_label).toBe('Gemini Omni 1.2 Flash');
+    expect(omniShot.duration_seconds).toBe(10);
+    expect(omniShot.estimated_usdc6).toBeLessThan(veoShot.estimated_usdc6);
   });
 
   it('maps a storyboard scene to a priced shot quote', () => {

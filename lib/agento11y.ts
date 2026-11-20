@@ -119,7 +119,7 @@ export function logAgento11yExporterWarning(): void {
   );
 }
 
-type AdkPluginLike = {
+export type AdkPluginLike = {
   name: string;
   onUserMessageCallback?: (params: unknown) => Promise<unknown>;
   beforeRunCallback?: (params: unknown) => Promise<unknown>;
@@ -138,9 +138,10 @@ type AdkPluginLike = {
 /**
  * ADK 2.x PluginManager calls every BasePlugin method. `@grafana/agento11y`
  * ships a duck-typed plugin for older ADK — wrap it so missing methods
- * (e.g. beforeToolSelection) fall through to BasePlugin no-ops.
+ * (e.g. beforeToolSelection) fall through to BasePlugin no-ops and
+ * observability failures never abort agent or tool error handling.
  */
-class Agento11yAdkPluginAdapter extends BasePlugin {
+export class Agento11yAdkPluginAdapter extends BasePlugin {
   private readonly inner: AdkPluginLike;
 
   constructor(inner: AdkPluginLike) {
@@ -148,18 +149,40 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     this.inner = inner;
   }
 
+  private async runSafely(
+    hookName: string,
+    fn: () => Promise<unknown> | undefined,
+    ignoredError?: unknown,
+  ): Promise<void> {
+    try {
+      await fn();
+    } catch (err) {
+      if (ignoredError !== undefined && err === ignoredError) {
+        return;
+      }
+      console.warn(
+        `[agento11y] ${hookName} failed:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
   override async onUserMessageCallback(params: {
     invocationContext: unknown;
     userMessage: unknown;
   }): Promise<undefined> {
-    await this.inner.onUserMessageCallback?.(params);
+    await this.runSafely('onUserMessageCallback', () =>
+      this.inner.onUserMessageCallback?.(params),
+    );
     return undefined;
   }
 
   override async beforeRunCallback(params: {
     invocationContext: unknown;
   }): Promise<undefined> {
-    await this.inner.beforeRunCallback?.(params);
+    await this.runSafely('beforeRunCallback', () =>
+      this.inner.beforeRunCallback?.(params),
+    );
     return undefined;
   }
 
@@ -167,21 +190,27 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     invocationContext: unknown;
     event: unknown;
   }): Promise<undefined> {
-    await this.inner.onEventCallback?.(params);
+    await this.runSafely('onEventCallback', () =>
+      this.inner.onEventCallback?.(params),
+    );
     return undefined;
   }
 
   override async afterRunCallback(params: {
     invocationContext: unknown;
   }): Promise<void> {
-    await this.inner.afterRunCallback?.(params);
+    await this.runSafely('afterRunCallback', () =>
+      this.inner.afterRunCallback?.(params),
+    );
   }
 
   override async beforeAgentCallback(params: {
     agent: unknown;
     callbackContext: unknown;
   }): Promise<undefined> {
-    await this.inner.beforeAgentCallback?.(params);
+    await this.runSafely('beforeAgentCallback', () =>
+      this.inner.beforeAgentCallback?.(params),
+    );
     return undefined;
   }
 
@@ -189,7 +218,9 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     agent: unknown;
     callbackContext: unknown;
   }): Promise<undefined> {
-    await this.inner.afterAgentCallback?.(params);
+    await this.runSafely('afterAgentCallback', () =>
+      this.inner.afterAgentCallback?.(params),
+    );
     return undefined;
   }
 
@@ -197,7 +228,9 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     callbackContext: unknown;
     llmRequest: unknown;
   }): Promise<undefined> {
-    await this.inner.beforeModelCallback?.(params);
+    await this.runSafely('beforeModelCallback', () =>
+      this.inner.beforeModelCallback?.(params),
+    );
     return undefined;
   }
 
@@ -205,7 +238,9 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     callbackContext: unknown;
     llmResponse: unknown;
   }): Promise<undefined> {
-    await this.inner.afterModelCallback?.(params);
+    await this.runSafely('afterModelCallback', () =>
+      this.inner.afterModelCallback?.(params),
+    );
     return undefined;
   }
 
@@ -214,7 +249,11 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     llmRequest: unknown;
     error: Error;
   }): Promise<undefined> {
-    await this.inner.onModelErrorCallback?.(params);
+    await this.runSafely(
+      'onModelErrorCallback',
+      () => this.inner.onModelErrorCallback?.(params),
+      params.error,
+    );
     return undefined;
   }
 
@@ -223,7 +262,9 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     toolArgs: Record<string, unknown>;
     toolContext: unknown;
   }): Promise<undefined> {
-    await this.inner.beforeToolCallback?.(params);
+    await this.runSafely('beforeToolCallback', () =>
+      this.inner.beforeToolCallback?.(params),
+    );
     return undefined;
   }
 
@@ -233,7 +274,9 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     toolContext: unknown;
     result: unknown;
   }): Promise<undefined> {
-    await this.inner.afterToolCallback?.(params);
+    await this.runSafely('afterToolCallback', () =>
+      this.inner.afterToolCallback?.(params),
+    );
     return undefined;
   }
 
@@ -243,7 +286,11 @@ class Agento11yAdkPluginAdapter extends BasePlugin {
     toolContext: unknown;
     error: Error;
   }): Promise<undefined> {
-    await this.inner.onToolErrorCallback?.(params);
+    await this.runSafely(
+      'onToolErrorCallback',
+      () => this.inner.onToolErrorCallback?.(params),
+      params.error,
+    );
     return undefined;
   }
 }

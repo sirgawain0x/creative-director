@@ -154,11 +154,13 @@ export interface DirectorBatchQuoteShot {
   generate: {
     prompt: string;
     duration: number;
+    omniDuration?: number;
     veoDuration?: number;
     seedanceDuration?: number;
     aspect_ratio: string;
     resolution: string;
   };
+  omni?: DirectorProviderQuote;
   veo: DirectorProviderQuote;
   seedance: DirectorProviderQuote;
 }
@@ -169,6 +171,7 @@ export interface DirectorBatchQuoteResponse {
   shotCount: number;
   shots: DirectorBatchQuoteShot[];
   totals: {
+    allOmni?: DirectorProviderQuote;
     allVeo: DirectorProviderQuote;
     allSeedance: DirectorProviderQuote;
     recommendedMix: DirectorProviderQuote & {
@@ -455,7 +458,9 @@ export async function enqueueBatchShot(
 
   const provider: GenerateProvider = input.generateEndpoint.includes('seedance')
     ? 'seedance'
-    : 'veo';
+    : input.generateEndpoint.includes('omni')
+      ? 'omni'
+      : 'veo';
 
   const status =
     data.status === 'completed'
@@ -472,7 +477,7 @@ export async function enqueueBatchShot(
     status,
     progress: data.progress ?? (status === 'completed' ? 100 : 0),
     model: data.model,
-    veo_task_id: data.veoTaskId ?? (provider === 'veo' ? data.id : undefined),
+    veo_task_id: data.veoTaskId ?? (provider !== 'seedance' ? data.id : undefined),
     output_video_url: data.output?.video_url,
     cost_usdc6: data.costUsdc6,
     crtvai_required: data.crtvaiRequired,
@@ -512,7 +517,11 @@ export async function pollGenerateTask(
 
   return {
     request_id: data.id,
-    provider: data.veoTaskId ? 'veo' : 'seedance',
+    provider: data.model?.includes('omni')
+      ? 'omni'
+      : data.veoTaskId
+        ? 'veo'
+        : 'seedance',
     status,
     progress: data.progress ?? 0,
     model: data.model,

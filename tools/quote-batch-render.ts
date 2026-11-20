@@ -54,6 +54,14 @@ function applyRemoteBatchQuote(
   quote.expires_at = remote.expiresAt;
   quote.remote_quote = true;
   quote.totals = {
+    ...(remote.totals.allOmni
+      ? {
+          all_omni: {
+            crtvai_required: remote.totals.allOmni.crtvaiRequired,
+            formatted_usd: remote.totals.allOmni.formattedUsd ?? '',
+          },
+        }
+      : {}),
     all_veo: {
       crtvai_required: remote.totals.allVeo.crtvaiRequired,
       formatted_usd: remote.totals.allVeo.formattedUsd ?? '',
@@ -82,8 +90,19 @@ function applyRemoteBatchQuote(
     localShot.aspect_ratio = (remoteShot.generate.aspect_ratio as SeedanceAspectRatio) ?? localShot.aspect_ratio;
     localShot.resolution = (remoteShot.generate.resolution as SeedanceResolution) ?? localShot.resolution;
     localShot.provider_label =
-      localShot.provider === 'seedance' ? 'Higgsfield Seedance 2.5' : 'Google Veo 3.1';
+      localShot.provider === 'omni'
+        ? 'Gemini Omni 1.2 Flash'
+        : localShot.provider === 'seedance'
+          ? 'Higgsfield Seedance 2.5'
+          : 'Google Veo 3.1';
 
+    if (remoteShot.omni) {
+      localShot.omni_quote = {
+        crtvai_required: remoteShot.omni.crtvaiRequired,
+        formatted_usd: remoteShot.omni.formattedUsd ?? '',
+        estimated_usdc6: remoteShot.omni.estimatedUsdc6,
+      };
+    }
     localShot.veo_quote = {
       crtvai_required: remoteShot.veo.crtvaiRequired,
       formatted_usd: remoteShot.veo.formattedUsd ?? '',
@@ -97,7 +116,11 @@ function applyRemoteBatchQuote(
     };
 
     const selected =
-      localShot.provider === 'veo' ? remoteShot.veo : remoteShot.seedance;
+      localShot.provider === 'omni' && remoteShot.omni
+        ? remoteShot.omni
+        : localShot.provider === 'veo'
+          ? remoteShot.veo
+          : remoteShot.seedance;
     localShot.crtvai_required = selected.crtvaiRequired;
     localShot.formatted_usd = selected.formattedUsd ?? localShot.formatted_usd;
     localShot.estimated_usdc6 =

@@ -188,4 +188,27 @@ describe('pixels-generate-client batch APIs', () => {
       }),
     ).rejects.toBeInstanceOf(PixelsGenerateError);
   });
+
+  it('enqueueBatchShot handles /api/pixels-render-omni', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        id: 'omni-int-1',
+        status: 'processing',
+        progress: 0,
+        model: 'gemini-omni-1.2-flash',
+        pixelsRequestId: 'req-omni-1',
+      }),
+    );
+
+    const result = await enqueueBatchShot(auth, {
+      generateEndpoint: '/api/pixels-render-omni',
+      batchConfirmId: 'bc-1',
+      shotId: 'shot-1',
+      requestId: 'req-omni-1',
+    });
+
+    expect(result.provider).toBe('omni');
+    expect(result.request_id).toBe('req-omni-1');
+    expect(result.veo_task_id).toBe('omni-int-1');
+  });
 });

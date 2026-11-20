@@ -130,4 +130,76 @@ describe('quoteBatchRender', () => {
     expect(result).not.toHaveProperty('wallet_address');
     expect(JSON.stringify(result)).not.toContain('secret-privy-token');
   });
+
+  it('enriches allOmni totals and per-shot omni quotes when preferred_provider is omni', async () => {
+    mockIsConfigured.mockReturnValue(true);
+    mockQuoteDirectorBatch.mockResolvedValue({
+      batchQuoteId: 'remote-bq-omni',
+      expiresAt: '2026-09-19T01:00:00.000Z',
+      shotCount: 1,
+      shots: [
+        {
+          shotId: 'shot-1',
+          recommendedProvider: 'omni',
+          generate: {
+            prompt: 'Neon alley. Camera movement: handheld. Music video aesthetic.',
+            duration: 10,
+            omniDuration: 10,
+            aspect_ratio: '16:9',
+            resolution: '720p',
+          },
+          omni: {
+            provider: 'omni',
+            crtvaiRequired: '700000',
+            formattedUsd: '$0.70',
+            estimatedUsdc6: 700000,
+          },
+          veo: {
+            provider: 'veo',
+            crtvaiRequired: '3200000',
+            formattedUsd: '$3.20',
+            estimatedUsdc6: 3200000,
+          },
+          seedance: {
+            provider: 'seedance',
+            crtvaiRequired: '3236000',
+            formattedUsd: '$3.24',
+            quoteId: 'sq-remote',
+          },
+        },
+      ],
+      totals: {
+        allOmni: {crtvaiRequired: '700000', formattedUsd: '$0.70'},
+        allVeo: {crtvaiRequired: '3200000', formattedUsd: '$3.20'},
+        allSeedance: {crtvaiRequired: '3236000', formattedUsd: '$3.24'},
+        recommendedMix: {
+          crtvaiRequired: '700000',
+          formattedUsd: '$0.70',
+          providers: {veo: 0, seedance: 0, omni: 1},
+        },
+      },
+    });
+
+    const result = await quoteBatchRender({
+      shots: [
+        {
+          scene_index: 1,
+          timestamp_start: '00:00',
+          timestamp_end: '00:10',
+          duration_seconds: 10,
+          visual_prompt: 'Neon alley',
+          camera_movement: 'handheld',
+        },
+      ],
+      preferred_provider: 'omni',
+      access_token: 'privy-token',
+      wallet_address: '0xabc',
+    });
+
+    expect(result.remote_quote_enriched).toBe(true);
+    expect(result.shots[0].provider).toBe('omni');
+    expect(result.shots[0].provider_label).toBe('Gemini Omni 1.2 Flash');
+    expect(result.shots[0].omni_quote?.formatted_usd).toBe('$0.70');
+    expect(result.totals?.all_omni?.formatted_usd).toBe('$0.70');
+  });
 });

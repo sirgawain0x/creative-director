@@ -20,7 +20,7 @@ Vercel serverless  api/director.ts   (repo: g2-1/edit-pixels)
 Vertex AI Reasoning Engine / Agent Runtime   (THIS repo)
   projects/creative-ai-491118/locations/us-east1/reasoningEngines/7129954674127405056
         │
-        ├─► Gemini 3.5 Flash  (GOOGLE_CLOUD_LOCATION=global — not us-east1)
+        ├─► Gemini 3.8 Flash  (GOOGLE_CLOUD_LOCATION=global — not us-east1)
         ├─► Veo video LRO     (VERTEX_LOCATION=us-central1)
         ├─► GCS renders       (RENDERS_GCS_BUCKET=creative-ai-491118-creative-pixels-renders)
         └─► Pixels headless   (PIXELS_HEADLESS_URL → Cloud Run, separate from Agent Engine)

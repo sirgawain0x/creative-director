@@ -53,7 +53,7 @@ describe('signC2paManifest', () => {
       master_video_url:
         'https://storage.googleapis.com/creative-ai-491118-creative-pixels-renders/masters/demo.mp4',
       creator_did: '0xabc',
-      ai_models_used: 'Gemini 3.5 Flash, Veo 3.1',
+      ai_models_used: 'Gemini 3.8 Flash, Veo 3.1',
       clip_urls: ['https://storage.googleapis.com/creative-ai-491118-creative-pixels-renders/cuts/scene_1.mp4'],
       project_title: 'Demo',
     });
@@ -84,7 +84,7 @@ describe('signC2paManifest', () => {
       master_video_url:
         'https://storage.googleapis.com/creative-ai-491118-creative-pixels-renders/masters/demo.mp4',
       creator_did: '0xabc',
-      ai_models_used: 'Gemini 3.5 Flash, Veo 3.1',
+      ai_models_used: 'Gemini 3.8 Flash, Veo 3.1',
       clip_urls: ['https://storage.googleapis.com/creative-ai-491118-creative-pixels-renders/cuts/scene_1.mp4'],
       project_title: 'Demo',
     });
@@ -98,5 +98,35 @@ describe('signC2paManifest', () => {
     expect(mockEmbedC2pa).toHaveBeenCalledOnce();
     expect(mockUpload).toHaveBeenCalledOnce();
     expect(mockResolveReadable).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects hallucinated master or clip URLs before writing GCS sidecars', async () => {
+    await expect(
+      signC2paManifest({
+        master_video_url: 'gcs://pixels-assets/masters/out.mp4',
+        creator_did: '0xabc',
+        ai_models_used: 'Gemini 3.8 Flash',
+      }),
+    ).rejects.toThrow(/gcs:\/\//i);
+
+    await expect(
+      signC2paManifest({
+        master_video_url: 'https://gcs.pixels.online/provenance/m.mp4',
+        creator_did: '0xabc',
+        ai_models_used: 'Gemini 3.8 Flash',
+      }),
+    ).rejects.toThrow(/placeholder domain/i);
+
+    await expect(
+      signC2paManifest({
+        master_video_url:
+          'https://storage.googleapis.com/creative-ai-491118-creative-pixels-renders/masters/demo.mp4',
+        creator_did: '0xabc',
+        ai_models_used: 'Gemini 3.8 Flash',
+        clip_urls: ['gcs://pixels-assets/renders/shot_1.mp4'],
+      }),
+    ).rejects.toThrow(/clip_urls\[0\]/);
+
+    expect(mockWriteProvenance).not.toHaveBeenCalled();
   });
 });
