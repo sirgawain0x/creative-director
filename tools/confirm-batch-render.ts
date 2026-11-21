@@ -45,7 +45,7 @@ export interface ConfirmBatchRenderResult {
   mock: false;
   batch_quote_id: string;
   batch_confirm_id?: string;
-  status: 'jobs_started' | 'rejected' | 'error';
+  status: 'jobs_started' | 'rejected' | 'error' | 'use_pixels_batch_panel';
   notice: string;
   shot_count: number;
   jobs: ConfirmBatchShotResult[];
@@ -180,9 +180,9 @@ export async function confirmBatchRender(
     return {
       mock: false,
       batch_quote_id: input.batch_quote_id,
-      status: 'error',
+      status: 'use_pixels_batch_panel',
       notice:
-        'access_token (Privy) required to start Pixels Generate jobs. Pass from the Pixels session.',
+        'Rendering must be started from the Batch render panel under the Director chat in Pixels — it prices each shot live in CRTVAI, takes the payment from the user\'s wallet, and starts the jobs. The agent has no wallet or Privy session, so it cannot pay or dispatch. Tell the user to use that panel (nothing was charged).',
       shot_count: stored.shot_count,
       jobs: [],
       clip_urls: [],
@@ -198,9 +198,9 @@ export async function confirmBatchRender(
     return {
       mock: false,
       batch_quote_id: input.batch_quote_id,
-      status: 'error',
+      status: 'use_pixels_batch_panel',
       notice:
-        'No valid Pixels batch quote — remote batch-quote did not succeed. Re-call quote_batch_render with access_token and wallet_address.',
+        'Rendering must be started from the Batch render panel under the Director chat in Pixels — it prices each shot live in CRTVAI, takes the payment from the user\'s wallet, and starts the jobs. The agent has no wallet or Privy session, so it cannot pay or dispatch. Tell the user to use that panel (nothing was charged).',
       shot_count: stored.shot_count,
       jobs: [],
       clip_urls: [],

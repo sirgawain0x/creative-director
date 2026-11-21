@@ -33,6 +33,7 @@ export interface QuoteBatchRenderInput {
 }
 
 export interface QuoteBatchRenderResult extends BatchRenderQuote {
+  crtvai_presentation_rules: string;
   mock: false;
   pixels_api_configured: boolean;
   remote_quote_enriched: boolean;
@@ -122,6 +123,7 @@ function applyRemoteBatchQuote(
           ? remoteShot.veo
           : remoteShot.seedance;
     localShot.crtvai_required = selected.crtvaiRequired;
+    localShot.crtvai_display = weiToCrtvai(selected.crtvaiRequired);
     localShot.formatted_usd = selected.formattedUsd ?? localShot.formatted_usd;
     localShot.estimated_usdc6 =
       selected.estimatedUsdc6 ??
@@ -140,6 +142,50 @@ function applyRemoteBatchQuote(
   quote.total_crtvai_required = totalCrtvai.toString();
   quote.total_estimated_usdc6 = totalUsdc6;
   quote.total_formatted_usd = remote.totals.recommendedMix.formattedUsd ?? `$${(totalUsdc6 / 1_000_000).toFixed(2)}`;
+  const totalDisplay = weiToCrtvai(totalCrtvai.toString());
+  quote.total_crtvai_display = totalDisplay;
+  quote.usd_per_crtvai =
+    totalDisplay && totalDisplay > 0
+      ? roundTo(totalUsdc6 / 1_000_000 / totalDisplay, 4)
+      : null;
+  quote.crtvai_price_source = totalDisplay != null ? 'live_curve' : 'unavailable';
+}
+
+/** CRTVAI has 18 decimals. Rounded to 4 dp for display (wei string stays exact). */
+function weiToCrtvai(wei: string): number | null {
+  try {
+    const value = BigInt(wei);
+    if (value <= 0n) return null;
+    const whole = value / 10n ** 18n;
+    const frac = value % 10n ** 18n;
+    return roundTo(Number(whole) + Number(frac) / 1e18, 4);
+  } catch {
+    return null;
+  }
+}
+
+function roundTo(value: number, decimals: number): number {
+  const f = 10 ** decimals;
+  return Math.round(value * f) / f;
+}
+
+/**
+ * Local (non-Pixels) quotes cannot price CRTVAI — the token floats on a bonding curve.
+ * Strip the placeholder wei so the model never presents USD amounts as CRTVAI.
+ */
+function stripUnpricedCrtvai<T extends BatchRenderQuote>(quote: T): T {
+  return {
+    ...quote,
+    total_crtvai_required: 'unavailable',
+    total_crtvai_display: null,
+    usd_per_crtvai: null,
+    crtvai_price_source: 'unavailable',
+    shots: quote.shots.map((shot) => ({
+      ...shot,
+      crtvai_required: 'unavailable',
+      crtvai_display: null,
+    })),
+  };
 }
 
 function perShotConsistentCharacter(
@@ -233,13 +279,21 @@ export async function quoteBatchRender(
       quote.notice +=
         ' WARNING: Pixels batch-quote failed — prices are local estimates only; confirm will not proceed until batch-quote succeeds.';
     }
+  } else {
+    quote.notice +=
+      ' WARNING: Live Pixels pricing was not requested (no Pixels auth/config) — USD is an estimate and the CRTVAI amount is unknown.';
   }
 
   // Never echo Privy token or wallet in tool output (stored in-memory for confirm only).
   const {access_token: _at, wallet_address: _wa, ...safeQuote} = stored;
+  const output = remoteEnriched ? safeQuote : stripUnpricedCrtvai(safeQuote);
 
   return {
-    ...safeQuote,
+    ...output,
+    crtvai_presentation_rules:
+      'CRTVAI is a floating bonding-curve token, NOT pegged to USD. Show CRTVAI only from crtvai_display / total_crtvai_display (already in whole tokens). ' +
+      'Never derive CRTVAI from USD and never write "X CRTVAI (~$X)" with the same number. ' +
+      'If total_crtvai_display is null, show USD only and say the live CRTVAI price is unavailable.',
     mock: false,
     pixels_api_configured: isPixelsGenerateConfigured(),
     remote_quote_enriched: remoteEnriched,
