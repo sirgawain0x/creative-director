@@ -9,8 +9,8 @@
 : "${OTEL_EXPORTER_OTLP_PROTOCOL:=http/protobuf}"
 : "${OTEL_SERVICE_NAME:=creative-director-ai}"
 
-: "${AGENTO11Y_AUTH_TOKEN_SECRET:=creative-director-agento11y-auth-token}"
-: "${OTEL_EXPORTER_OTLP_HEADERS_SECRET:=creative-director-otel-otlp-headers}"
+: "${AGENTO11Y_AUTH_TOKEN_SECRET:=AGENTO11Y_AUTH_TOKEN}"
+: "${OTEL_EXPORTER_OTLP_HEADERS_SECRET:=OTEL_EXPORTER_OTLP_HEADERS}"
 : "${AGENTO11Y_SECRET_VERSION:=latest}"
 
 agento11y_plain_env_vars=(
