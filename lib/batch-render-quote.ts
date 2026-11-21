@@ -45,6 +45,11 @@ export interface BatchShotQuote {
   resolution: SeedanceResolution;
   estimated_usdc6: number;
   crtvai_required: string;
+  /**
+   * Human CRTVAI amount (wei / 1e18) priced on the live meToken bonding curve.
+   * `null` when the live Pixels quote was unavailable — never assume 1 CRTVAI = $1.
+   */
+  crtvai_display: number | null;
   formatted_usd: string;
   seedance_quote_id?: string;
   provider_label: string;
@@ -70,6 +75,12 @@ export interface BatchRenderQuote {
   shots: BatchShotQuote[];
   total_estimated_usdc6: number;
   total_crtvai_required: string;
+  /** Human CRTVAI total from the live curve; `null` when live pricing failed. */
+  total_crtvai_display: number | null;
+  /** Implied USD per CRTVAI for this quote (total USD / total CRTVAI); `null` when unavailable. */
+  usd_per_crtvai: number | null;
+  /** `live_curve` = priced by Pixels against the on-chain CRTVAI curve; `unavailable` = USD only. */
+  crtvai_price_source: 'live_curve' | 'unavailable';
   total_formatted_usd: string;
   notice: string;
   created_at: string;
@@ -253,6 +264,7 @@ export function mapStoryboardSceneToShot(
       resolution,
       estimated_usdc6: omni.estimated_usdc6,
       crtvai_required: omni.crtvai_required,
+      crtvai_display: null,
       formatted_usd: formatUsd(omni.estimated_usdc6),
       provider_label: 'Gemini Omni 1.2 Flash',
     };
@@ -272,6 +284,7 @@ export function mapStoryboardSceneToShot(
       resolution,
       estimated_usdc6: seedance.estimated_usdc6,
       crtvai_required: seedance.crtvai_required,
+      crtvai_display: null,
       formatted_usd: formatUsd(seedance.estimated_usdc6),
       seedance_quote_id: seedance.seedance_quote_id,
       provider_label: 'Higgsfield Seedance 2.5',
@@ -291,6 +304,7 @@ export function mapStoryboardSceneToShot(
     resolution,
     estimated_usdc6: veo.estimated_usdc6,
     crtvai_required: veo.crtvai_required,
+    crtvai_display: null,
     formatted_usd: formatUsd(veo.estimated_usdc6),
     provider_label: 'Google Veo 3.1',
   };
@@ -337,6 +351,9 @@ export function createBatchRenderQuote(input: {
     shots: shotQuotes,
     total_estimated_usdc6: totalUsdc6,
     total_crtvai_required: totalCrtvai.toString(),
+    total_crtvai_display: null,
+    usd_per_crtvai: null,
+    crtvai_price_source: 'unavailable',
     total_formatted_usd: formatUsd(totalUsdc6),
     notice:
       'QUOTE ONLY — no CRTVAI spent and no clips rendered. User must confirm before confirm_batch_render.',

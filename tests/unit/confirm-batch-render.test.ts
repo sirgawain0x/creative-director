@@ -190,8 +190,9 @@ describe('confirmBatchRender', () => {
       access_token: 'token',
     });
 
-    expect(result.status).toBe('error');
-    expect(result.notice).toContain('remote batch-quote');
+    expect(result.status).toBe('use_pixels_batch_panel');
+    expect(result.notice).toContain('Batch render panel');
+    expect(result.notice).toContain('nothing was charged');
     expect(mockConfirmDirectorBatch).not.toHaveBeenCalled();
   });
 
