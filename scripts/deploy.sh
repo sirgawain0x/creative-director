@@ -49,4 +49,4 @@ exec agents-cli deploy \
   --project creative-ai-491118 \
   --region us-east1 \
   --update-env-vars "${ENV_CSV}" \
-  --update-secrets "${SECRET_CSV}"
+  --secrets "${SECRET_CSV}"
